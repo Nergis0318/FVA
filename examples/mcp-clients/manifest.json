@@ -65,6 +65,6 @@
     "Replace /path/to/your/project with your project root.",
     "On Windows, use the .windows.json variants or set the full path to fva.exe.",
     "Run `fva index --path .` once before heavy search workloads.",
-    "Set VOYAGE_API_KEY in env when using provider = voyage in config.toml."
+    "Set VOYAGE_API_KEY in env when using provider = voyage in fva.toml or ~/.config/fva/config.toml."
   ]
 }

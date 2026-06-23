@@ -276,44 +276,95 @@ fn default_log_level() -> String {
 }
 
 impl Config {
-    pub fn load(path: Option<&Path>) -> Result<Self> {
-        let mut config = Self::default();
-
-        if let Some(path) = path {
-            if path.exists() {
-                let content = std::fs::read_to_string(path)?;
-                let file_config: Config = toml::from_str(&content)?;
-                config = file_config;
-            }
-        } else {
-            for candidate in Self::config_search_paths() {
-                if candidate.exists() {
-                    let content = std::fs::read_to_string(&candidate)?;
-                    let file_config: Config = toml::from_str(&content)?;
-                    config = file_config;
-                    break;
-                }
-            }
-        }
-
-        Ok(config)
+    /// Load config with layered precedence (low → high):
+    /// defaults → `~/.config/fva/config.toml` → project `fva.toml` / `.fva.toml` → `--config`.
+    pub fn load(explicit: Option<&Path>, cli_root: Option<&str>) -> Result<Self> {
+        Self::load_layered(Some(Self::global_config_path().as_path()), cli_root, explicit)
     }
 
-    pub fn config_search_paths() -> Vec<PathBuf> {
-        let mut paths = Vec::new();
-        if let Ok(cwd) = std::env::current_dir() {
-            paths.push(cwd.join("config.toml"));
-            paths.push(cwd.join("fva.toml"));
+    fn load_layered(
+        global: Option<&Path>,
+        cli_root: Option<&str>,
+        explicit: Option<&Path>,
+    ) -> Result<Self> {
+        let default_toml = toml::to_string(&Self::default())
+            .map_err(|e| FvaError::Config(format!("serialize defaults: {e}")))?;
+        let mut value: toml::Value = toml::from_str(&default_toml)
+            .map_err(|e| FvaError::Config(format!("parse defaults: {e}")))?;
+
+        if let Some(path) = global {
+            Self::merge_file(&mut value, path)?;
         }
-        if let Some(config_dir) = dirs::config_dir() {
-            paths.push(config_dir.join("fva").join("config.toml"));
+
+        if let Some(root) = Self::tentative_project_root(cli_root, &value) {
+            if let Some(project_path) = Self::project_config_path(&root) {
+                Self::merge_file(&mut value, &project_path)?;
+            }
         }
-        // Cross-platform XDG-style path (~/.config/fva/config.toml). On Windows,
-        // dirs::config_dir() resolves to %APPDATA% (Roaming), not ~/.config.
-        if let Some(home) = dirs::home_dir() {
-            paths.push(home.join(".config").join("fva").join("config.toml"));
+
+        if let Some(path) = explicit {
+            Self::merge_file(&mut value, path)?;
         }
-        paths
+
+        let merged_toml = toml::to_string(&value)
+            .map_err(|e| FvaError::Config(format!("serialize merged config: {e}")))?;
+        toml::from_str(&merged_toml)
+            .map_err(|e| FvaError::Config(format!("invalid config: {e}")).into())
+    }
+
+    /// Global defaults: `~/.config/fva/config.toml` (XDG-style under home).
+    pub fn global_config_path() -> PathBuf {
+        dirs::home_dir()
+            .unwrap_or_else(PathBuf::new)
+            .join(".config")
+            .join("fva")
+            .join("config.toml")
+    }
+
+    /// Project config at root: `fva.toml` preferred, then `.fva.toml`.
+    pub fn project_config_path(root: &Path) -> Option<PathBuf> {
+        let fva = root.join("fva.toml");
+        if fva.is_file() {
+            return Some(fva);
+        }
+        let dot = root.join(".fva.toml");
+        if dot.is_file() {
+            return Some(dot);
+        }
+        None
+    }
+
+    pub fn project_config_candidates(root: &Path) -> [PathBuf; 2] {
+        [root.join("fva.toml"), root.join(".fva.toml")]
+    }
+
+    fn tentative_project_root(cli_root: Option<&str>, merged: &toml::Value) -> Option<PathBuf> {
+        if let Some(root) = cli_root {
+            return Some(PathBuf::from(root));
+        }
+
+        let project_root = merged
+            .get("project")
+            .and_then(|p| p.get("root"))
+            .and_then(|r| r.as_str())
+            .unwrap_or(".");
+
+        if project_root != "." {
+            return Some(PathBuf::from(project_root));
+        }
+
+        std::env::current_dir().ok()
+    }
+
+    fn merge_file(base: &mut toml::Value, path: &Path) -> Result<()> {
+        if !path.is_file() {
+            return Ok(());
+        }
+        let content = std::fs::read_to_string(path)?;
+        let overlay: toml::Value = toml::from_str(&content)
+            .map_err(|e| FvaError::Config(format!("parse {}: {e}", path.display())))?;
+        merge_toml_values(base, &overlay);
+        Ok(())
     }
 
     pub fn resolve_root(&self, cli_override: Option<&str>) -> Result<PathBuf> {
@@ -329,37 +380,101 @@ impl Config {
     }
 }
 
+fn merge_toml_values(base: &mut toml::Value, overlay: &toml::Value) {
+    match (base, overlay) {
+        (toml::Value::Table(base_table), toml::Value::Table(overlay_table)) => {
+            for (key, overlay_value) in overlay_table {
+                match base_table.get_mut(key) {
+                    Some(base_value) => merge_toml_values(base_value, overlay_value),
+                    None => {
+                        base_table.insert(key.clone(), overlay_value.clone());
+                    }
+                }
+            }
+        }
+        (base_slot, overlay_value) => *base_slot = overlay_value.clone(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
-    fn config_search_paths_include_xdg_home_config() {
-        let paths = Config::config_search_paths();
-        let xdg = dirs::home_dir()
+    fn global_config_path_is_xdg_home_config() {
+        let expected = dirs::home_dir()
             .expect("home dir")
             .join(".config")
             .join("fva")
             .join("config.toml");
-        assert!(
-            paths.contains(&xdg),
-            "expected XDG path in search list: {}",
-            xdg.display()
-        );
+        assert_eq!(Config::global_config_path(), expected);
+    }
+
+    #[test]
+    fn project_config_prefers_fva_toml_over_dot_fva_toml() {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        fs::write(root.join("fva.toml"), "[query]\ndefault_max_results = 7\n").unwrap();
+        fs::write(root.join(".fva.toml"), "[query]\ndefault_max_results = 9\n").unwrap();
+
+        let path = Config::project_config_path(root).expect("project config");
+        assert_eq!(path, root.join("fva.toml"));
+    }
+
+    #[test]
+    fn project_config_falls_back_to_dot_fva_toml() {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        fs::write(root.join(".fva.toml"), "[query]\ndefault_max_results = 9\n").unwrap();
+
+        let path = Config::project_config_path(root).expect("project config");
+        assert_eq!(path, root.join(".fva.toml"));
+    }
+
+    #[test]
+    fn layered_config_merges_global_and_project() {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        let global = root.join("global.toml");
+        fs::write(
+            &global,
+            "[embedding]\nprovider = \"voyage\"\n[query]\nfff_weight = 0.1\n",
+        )
+        .unwrap();
+        fs::write(root.join("fva.toml"), "[query]\nvector_weight = 0.9\n").unwrap();
+
+        let config =
+            Config::load_layered(Some(&global), Some(root.to_str().unwrap()), None).expect("load");
+
+        assert_eq!(config.embedding.provider, "voyage");
+        assert!((config.query.fff_weight - 0.1).abs() < f32::EPSILON);
+        assert!((config.query.vector_weight - 0.9).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn explicit_config_overrides_project_layer() {
+        let dir = TempDir::new().expect("tempdir");
+        let root = dir.path();
+        fs::write(root.join("fva.toml"), "[query]\nvector_weight = 0.9\n").unwrap();
+        let explicit = root.join("override.toml");
+        fs::write(&explicit, "[query]\nvector_weight = 0.2\n").unwrap();
+
+        let config = Config::load_layered(None, Some(root.to_str().unwrap()), Some(&explicit))
+            .expect("load");
+
+        assert!((config.query.vector_weight - 0.2).abs() < f32::EPSILON);
     }
 
     #[test]
     fn loads_global_xdg_config_when_no_local_config() {
-        let xdg = dirs::home_dir()
-            .expect("home dir")
-            .join(".config")
-            .join("fva")
-            .join("config.toml");
-        if !xdg.exists() {
+        let xdg = Config::global_config_path();
+        if !xdg.is_file() {
             return;
         }
 
-        let config = Config::load(None).expect("load config");
+        let config = Config::load(None, None).expect("load config");
         assert_eq!(
             config.embedding.provider, "voyage",
             "global ~/.config/fva/config.toml should set embedding.provider"

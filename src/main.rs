@@ -118,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let config = Config::load(cli.config.as_deref())?;
+    let config = Config::load(cli.config.as_deref(), cli.path.as_deref())?;
     init_logging(&config, cli.log_level.as_deref());
 
     let root = config.resolve_root(cli.path.as_deref())?;

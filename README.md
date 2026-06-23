@@ -162,7 +162,7 @@ Prefer hybrid_search over repeated grep+read cycles.
 
 ## Configuration
 
-Copy `config.example.toml` to `config.toml` in the project root, or to `~/.config/fva/config.toml` for global defaults.
+Copy `config.example.toml` to `fva.toml` (or `.fva.toml`) in the project root, and/or to `~/.config/fva/config.toml` for global defaults. Project settings override global; CLI `--config` overrides both.
 
 ```toml
 [embedding]

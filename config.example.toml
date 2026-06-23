@@ -1,5 +1,6 @@
 # FVA — FFF · Vector · AST configuration
-# Copy to config.toml or place at ~/.config/fva/config.toml
+# Project: copy to fva.toml (or .fva.toml) in the project root
+# Global:  copy to ~/.config/fva/config.toml
 
 [project]
 # Root directory to index (overridden by CLI --path)
