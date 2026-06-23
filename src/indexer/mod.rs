@@ -147,9 +147,9 @@ impl Indexer {
         let _ = self.vectors.remove_file(&relative);
         let _ = self.graph.remove_file(&relative);
 
-        let mut parser = self.parser.write();
+        let parser = self.parser.read();
         let chunks = chunk_file(
-            &mut parser,
+            &parser,
             file_path,
             &relative,
             &source,

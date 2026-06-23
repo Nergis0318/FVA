@@ -5,7 +5,7 @@ use std::path::Path;
 use blake3::Hash;
 use serde::{Deserialize, Serialize};
 
-use super::parser::{AstParser, LanguageId, RawChunk};
+use super::parser::{AstParser, RawChunk};
 use crate::error::Result;
 
 /// A semantic code chunk with full metadata.
@@ -29,7 +29,7 @@ impl CodeChunk {
         raw: RawChunk,
         file_path: &Path,
         relative_path: &str,
-        language: LanguageId,
+        language: &str,
         content_hash: &Hash,
     ) -> Self {
         let line_count = raw.content.lines().count();
@@ -42,7 +42,7 @@ impl CodeChunk {
             id,
             file_path: file_path.to_string_lossy().to_string(),
             relative_path: relative_path.to_string(),
-            language: language.as_str().to_string(),
+            language: language.to_string(),
             symbol_name: raw.name,
             symbol_kind: raw.kind,
             start_line: raw.start_line,
@@ -61,7 +61,7 @@ impl CodeChunk {
 
 /// Chunk a single source file using Tree-sitter.
 pub fn chunk_file(
-    parser: &mut AstParser,
+    parser: &AstParser,
     file_path: &Path,
     relative_path: &str,
     source: &str,
@@ -72,17 +72,15 @@ pub fn chunk_file(
     }
 
     let content_hash = blake3::hash(source.as_bytes());
-    let language = AstParser::detect_language(file_path);
-
-    let Some(parsed) = parser.parse(language, source)? else {
+    let Some(language) = AstParser::detect_language(file_path, Some(source)) else {
         return Ok(vec![]);
     };
 
-    let raw_chunks = parser.extract_chunks(&parsed);
+    let raw_chunks = parser.extract_chunks(&language, source);
 
     Ok(raw_chunks
         .into_iter()
-        .map(|raw| CodeChunk::from_raw(raw, file_path, relative_path, language, &content_hash))
+        .map(|raw| CodeChunk::from_raw(raw, file_path, relative_path, &language, &content_hash))
         .collect())
 }
 
@@ -155,9 +153,9 @@ struct MyStruct {
     field: i32,
 }
 "#;
-        let mut parser = AstParser::new();
+        let parser = AstParser::new();
         let path = PathBuf::from("test.rs");
-        let chunks = chunk_file(&mut parser, &path, "test.rs", source, 1_000_000).unwrap();
+        let chunks = chunk_file(&parser, &path, "test.rs", source, 1_000_000).unwrap();
         assert!(!chunks.is_empty());
         assert!(chunks.iter().any(|c| c.symbol_name == "hello_world"));
     }

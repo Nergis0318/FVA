@@ -1,311 +1,46 @@
 //! Tree-sitter based multi-language AST parser.
+//!
+//! Supports all 306+ tree-sitter grammars via [`tree_sitter_language_pack`].
 
-use std::collections::HashMap;
-use std::sync::OnceLock;
+use tree_sitter_language_pack::{
+    ProcessConfig, StructureItem, StructureKind, detect_language_from_content,
+    detect_language_from_path, process,
+};
 
-use tree_sitter::{Language, Parser, Query, QueryCursor, StreamingIterator, Tree};
-
-use crate::error::{FvaError, Result};
-
-/// Supported programming languages.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LanguageId {
-    Rust,
-    Python,
-    JavaScript,
-    TypeScript,
-    Tsx,
-    Go,
-    C,
-    Cpp,
-    Java,
-    Unknown,
-}
-
-impl LanguageId {
-    pub fn from_extension(ext: &str) -> Self {
-        match ext.to_lowercase().as_str() {
-            "rs" => Self::Rust,
-            "py" | "pyi" => Self::Python,
-            "js" | "mjs" | "cjs" => Self::JavaScript,
-            "ts" => Self::TypeScript,
-            "tsx" => Self::Tsx,
-            "go" => Self::Go,
-            "c" | "h" => Self::C,
-            "cpp" | "cc" | "cxx" | "hpp" | "hxx" => Self::Cpp,
-            "java" => Self::Java,
-            _ => Self::Unknown,
-        }
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Rust => "rust",
-            Self::Python => "python",
-            Self::JavaScript => "javascript",
-            Self::TypeScript => "typescript",
-            Self::Tsx => "tsx",
-            Self::Go => "go",
-            Self::C => "c",
-            Self::Cpp => "cpp",
-            Self::Java => "java",
-            Self::Unknown => "unknown",
-        }
-    }
-
-    fn tree_sitter_language(&self) -> Option<Language> {
-        match self {
-            Self::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
-            Self::Python => Some(tree_sitter_python::LANGUAGE.into()),
-            Self::JavaScript => Some(tree_sitter_javascript::LANGUAGE.into()),
-            Self::TypeScript => Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
-            Self::Tsx => Some(tree_sitter_typescript::LANGUAGE_TSX.into()),
-            Self::Go => Some(tree_sitter_go::LANGUAGE.into()),
-            Self::C => Some(tree_sitter_c::LANGUAGE.into()),
-            Self::Cpp => Some(tree_sitter_cpp::LANGUAGE.into()),
-            Self::Java => Some(tree_sitter_java::LANGUAGE.into()),
-            Self::Unknown => None,
-        }
-    }
-
-    /// Tree-sitter query for extracting semantic chunks.
-    fn chunk_query(&self) -> Option<&'static str> {
-        match self {
-            Self::Rust => Some(
-                r#"
-                (function_item
-                  name: (identifier) @name) @chunk
-
-                (impl_item
-                  type: (type_identifier) @name) @chunk
-
-                (struct_item
-                  name: (type_identifier) @name) @chunk
-
-                (enum_item
-                  name: (type_identifier) @name) @chunk
-
-                (trait_item
-                  name: (type_identifier) @name) @chunk
-
-                (mod_item
-                  name: (identifier) @name) @chunk
-                "#,
-            ),
-            Self::Python => Some(
-                r#"
-                (function_definition
-                  name: (identifier) @name) @chunk
-
-                (class_definition
-                  name: (identifier) @name) @chunk
-                "#,
-            ),
-            Self::JavaScript | Self::TypeScript | Self::Tsx => Some(
-                r#"
-                (function_declaration
-                  name: (identifier) @name) @chunk
-
-                (class_declaration
-                  name: (identifier) @name) @chunk
-
-                (method_definition
-                  name: (property_identifier) @name) @chunk
-
-                (arrow_function) @chunk
-
-                (export_statement
-                  declaration: (function_declaration
-                    name: (identifier) @name) @chunk)
-
-                (export_statement
-                  declaration: (class_declaration
-                    name: (identifier) @name) @chunk)
-                "#,
-            ),
-            Self::Go => Some(
-                r#"
-                (function_declaration
-                  name: (identifier) @name) @chunk
-
-                (method_declaration
-                  name: (field_identifier) @name) @chunk
-
-                (type_declaration
-                  (type_spec
-                    name: (type_identifier) @name)) @chunk
-                "#,
-            ),
-            Self::C | Self::Cpp => Some(
-                r#"
-                (function_definition
-                  declarator: (function_declarator
-                    declarator: (identifier) @name)) @chunk
-
-                (class_specifier
-                  name: (type_identifier) @name) @chunk
-
-                (struct_specifier
-                  name: (type_identifier) @name) @chunk
-                "#,
-            ),
-            Self::Java => Some(
-                r#"
-                (method_declaration
-                  name: (identifier) @name) @chunk
-
-                (class_declaration
-                  name: (identifier) @name) @chunk
-
-                (interface_declaration
-                  name: (identifier) @name) @chunk
-                "#,
-            ),
-            Self::Unknown => None,
-        }
-    }
-}
-
-/// A parsed source file with its AST tree.
-pub struct ParsedFile {
-    pub language: LanguageId,
-    pub tree: Tree,
-    pub source: String,
-}
-
-/// Multi-language Tree-sitter parser with cached queries.
-pub struct AstParser {
-    parsers: HashMap<LanguageId, Parser>,
-    queries: HashMap<LanguageId, Query>,
-}
+/// Multi-language Tree-sitter parser backed by the global language-pack registry.
+pub struct AstParser;
 
 impl AstParser {
     pub fn new() -> Self {
-        let mut parsers = HashMap::new();
-        let mut queries = HashMap::new();
-
-        for lang in [
-            LanguageId::Rust,
-            LanguageId::Python,
-            LanguageId::JavaScript,
-            LanguageId::TypeScript,
-            LanguageId::Tsx,
-            LanguageId::Go,
-            LanguageId::C,
-            LanguageId::Cpp,
-            LanguageId::Java,
-        ] {
-            if let Some(ts_lang) = lang.tree_sitter_language() {
-                let mut parser = Parser::new();
-                if parser.set_language(&ts_lang).is_ok() {
-                    parsers.insert(lang, parser);
-                }
-            }
-            if let Some(query_src) = lang.chunk_query() {
-                if let Some(ts_lang) = lang.tree_sitter_language() {
-                    if let Ok(query) = Query::new(&ts_lang, query_src) {
-                        queries.insert(lang, query);
-                    }
-                }
-            }
-        }
-
-        Self { parsers, queries }
+        Self
     }
 
-    pub fn detect_language(path: &std::path::Path) -> LanguageId {
-        path.extension()
-            .and_then(|e| e.to_str())
-            .map(LanguageId::from_extension)
-            .unwrap_or(LanguageId::Unknown)
+    /// Detect tree-sitter language from file path and optional source (shebang).
+    pub fn detect_language(path: &std::path::Path, source: Option<&str>) -> Option<String> {
+        let path_str = path.to_string_lossy();
+        detect_language_from_path(&path_str)
+            .map(str::to_string)
+            .or_else(|| {
+                source.and_then(|content| detect_language_from_content(content).map(str::to_string))
+            })
     }
 
-    pub fn parse(&mut self, language: LanguageId, source: &str) -> Result<Option<ParsedFile>> {
-        if language == LanguageId::Unknown {
-            return Ok(None);
-        }
-
-        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
-            FvaError::Parser(format!("unsupported language: {}", language.as_str()))
-        })?;
-
-        let tree = parser
-            .parse(source, None)
-            .ok_or_else(|| FvaError::Parser("tree-sitter parse failed".into()))?;
-
-        Ok(Some(ParsedFile {
-            language,
-            tree,
-            source: source.to_string(),
-        }))
-    }
-
-    pub fn extract_chunks(&self, parsed: &ParsedFile) -> Vec<RawChunk> {
-        let Some(query) = self.queries.get(&parsed.language) else {
-            return fallback_chunks(&parsed.source);
-        };
-
-        let mut cursor = QueryCursor::new();
-        let mut chunks = Vec::new();
-        let mut seen_ranges: Vec<(usize, usize)> = Vec::new();
-
-        let mut matches = cursor.matches(query, parsed.tree.root_node(), parsed.source.as_bytes());
-        while let Some(m) = matches.next() {
-            let mut name = String::new();
-            let mut chunk_node = None;
-
-            for capture in m.captures {
-                let capture_name = query.capture_names()[capture.index as usize];
-                let node = capture.node;
-                match capture_name {
-                    "name" => {
-                        name = node
-                            .utf8_text(parsed.source.as_bytes())
-                            .unwrap_or("")
-                            .to_string();
-                    }
-                    "chunk" => {
-                        chunk_node = Some(node);
-                    }
-                    _ => {}
+    /// Extract semantic chunks from source using tree-sitter structure analysis.
+    pub fn extract_chunks(&self, language: &str, source: &str) -> Vec<RawChunk> {
+        let config = ProcessConfig::new(language);
+        match process(source, &config) {
+            Ok(result) => {
+                let mut chunks = Vec::new();
+                collect_structure_chunks(&result.structure, source, &mut chunks);
+                if chunks.is_empty() {
+                    fallback_chunks(source)
+                } else {
+                    chunks.sort_by_key(|c| c.start_line);
+                    chunks
                 }
             }
-
-            if let Some(node) = chunk_node {
-                let start = node.start_byte();
-                let end = node.end_byte();
-                if is_overlapping(&seen_ranges, start, end) {
-                    continue;
-                }
-                seen_ranges.push((start, end));
-
-                let kind = node.kind().to_string();
-                let start_line = node.start_position().row + 1;
-                let end_line = node.end_position().row + 1;
-                let content = parsed.source[start..end].to_string();
-
-                chunks.push(RawChunk {
-                    name: if name.is_empty() {
-                        format!("{kind}@L{start_line}")
-                    } else {
-                        name
-                    },
-                    kind,
-                    start_line,
-                    end_line,
-                    start_byte: start,
-                    end_byte: end,
-                    content,
-                });
-            }
+            Err(_) => fallback_chunks(source),
         }
-
-        if chunks.is_empty() {
-            return fallback_chunks(&parsed.source);
-        }
-
-        chunks.sort_by_key(|c| c.start_line);
-        chunks
     }
 }
 
@@ -327,8 +62,53 @@ pub struct RawChunk {
     pub content: String,
 }
 
-fn is_overlapping(ranges: &[(usize, usize)], start: usize, end: usize) -> bool {
-    ranges.iter().any(|(s, e)| start < *e && end > *s)
+fn collect_structure_chunks(items: &[StructureItem], source: &str, out: &mut Vec<RawChunk>) {
+    for item in items {
+        push_structure_chunk(item, source, out);
+        collect_structure_chunks(&item.children, source, out);
+    }
+}
+
+fn push_structure_chunk(item: &StructureItem, source: &str, out: &mut Vec<RawChunk>) {
+    let span = &item.span;
+    if span.end_byte <= span.start_byte || span.end_byte > source.len() {
+        return;
+    }
+
+    let kind = structure_kind_str(&item.kind);
+    let start_line = span.start_line + 1;
+    let end_line = span.end_line + 1;
+    let name = item
+        .name
+        .clone()
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| format!("{kind}@L{start_line}"));
+
+    out.push(RawChunk {
+        name,
+        kind,
+        start_line,
+        end_line,
+        start_byte: span.start_byte,
+        end_byte: span.end_byte,
+        content: source[span.start_byte..span.end_byte].to_string(),
+    });
+}
+
+fn structure_kind_str(kind: &StructureKind) -> String {
+    match kind {
+        StructureKind::Function => "function".into(),
+        StructureKind::Method => "method".into(),
+        StructureKind::Class => "class".into(),
+        StructureKind::Struct => "struct".into(),
+        StructureKind::Interface => "interface".into(),
+        StructureKind::Enum => "enum".into(),
+        StructureKind::Module => "module".into(),
+        StructureKind::Trait => "trait".into(),
+        StructureKind::Impl => "impl".into(),
+        StructureKind::Namespace => "namespace".into(),
+        StructureKind::Other(name) => name.clone(),
+    }
 }
 
 /// Fallback: split file into line-based chunks when AST extraction fails.
@@ -360,20 +140,63 @@ fn fallback_chunks(source: &str) -> Vec<RawChunk> {
     chunks
 }
 
-static SUPPORTED_EXTENSIONS: OnceLock<Vec<&'static str>> = OnceLock::new();
-
-pub fn supported_extensions() -> &'static [&'static str] {
-    SUPPORTED_EXTENSIONS.get_or_init(|| {
-        vec![
-            "rs", "py", "pyi", "js", "mjs", "cjs", "ts", "tsx", "go", "c", "h", "cpp", "cc", "cxx",
-            "hpp", "hxx", "java",
-        ]
-    })
+/// Return whether a file path maps to a known tree-sitter language.
+pub fn is_indexable(path: &std::path::Path) -> bool {
+    AstParser::detect_language(path, None).is_some()
 }
 
-pub fn is_indexable(path: &std::path::Path) -> bool {
-    path.extension()
-        .and_then(|e| e.to_str())
-        .map(|ext| supported_extensions().contains(&ext))
-        .unwrap_or(false)
+/// Number of languages available in the tree-sitter language pack manifest.
+pub fn supported_language_count() -> usize {
+    tree_sitter_language_pack::language_count()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_common_extensions() {
+        assert_eq!(
+            AstParser::detect_language(std::path::Path::new("main.rs"), None),
+            Some("rust".into())
+        );
+        assert_eq!(
+            AstParser::detect_language(std::path::Path::new("app.py"), None),
+            Some("python".into())
+        );
+        assert_eq!(
+            AstParser::detect_language(std::path::Path::new("index.tsx"), None),
+            Some("tsx".into())
+        );
+        assert_eq!(
+            AstParser::detect_language(std::path::Path::new("README.md"), None),
+            Some("markdown".into())
+        );
+    }
+
+    #[test]
+    fn detects_shebang_language() {
+        let source = "#!/usr/bin/env python3\nprint('hi')";
+        assert_eq!(
+            AstParser::detect_language(std::path::Path::new("script"), Some(source)),
+            Some("python".into())
+        );
+    }
+
+    #[test]
+    fn extracts_rust_function_chunks() {
+        let source = r#"
+fn hello_world() {
+    println!("hello");
+}
+
+struct MyStruct {
+    field: i32,
+}
+"#;
+        let parser = AstParser::new();
+        let chunks = parser.extract_chunks("rust", source);
+        assert!(!chunks.is_empty());
+        assert!(chunks.iter().any(|c| c.name == "hello_world"));
+    }
 }
