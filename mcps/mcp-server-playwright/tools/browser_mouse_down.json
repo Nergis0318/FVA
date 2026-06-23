@@ -1,0 +1,20 @@
+{
+  "name": "browser_mouse_down",
+  "description": "Press mouse down",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "button": {
+        "description": "Button to press, defaults to left",
+        "type": "string",
+        "enum": [
+          "left",
+          "right",
+          "middle"
+        ]
+      }
+    },
+    "additionalProperties": false
+  }
+}

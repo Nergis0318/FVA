@@ -1,6 +1,185 @@
 # FVA — Fast Vector Agent
 
-High-speed hybrid codebase intelligence engine for AI coding agents. Combines **FFF** (fuzzy file search), **Tree-sitter** (AST chunking), **vector embeddings**, and **call graphs** into a single MCP server.
+High-speed hybrid codebase intelligence engine for AI coding agents. FVA combines **FFF** (fuzzy file search), **Tree-sitter** (AST chunking), **vector embeddings**, and **call graphs** into a single MCP server — so agents search by path, content, meaning, and structure in one pass.
+
+## Why FVA
+
+Most agent workflows chain `grep` → `read_file` → repeat. FVA replaces that loop with fused search:
+
+- **File discovery** — frecency-ranked fuzzy paths (FFF)
+- **Semantic recall** — embedding search over AST chunks
+- **Structural context** — call graph neighbors and symbol bodies
+- **One MCP server** — stdio transport, local-first, no telemetry
+
+## Install
+
+Pre-built binaries are published on [GitHub Releases](https://github.com/Nergis0318/FVA/releases) for:
+
+| Platform | amd64 | arm64 |
+|----------|-------|-------|
+| Linux | ✓ | ✓ |
+| Windows | ✓ | ✓ |
+| macOS | — | ✓ |
+
+### One-liner
+
+**Linux / macOS (Apple Silicon)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1 | iex
+```
+
+Installs to `~/.local/bin` (Unix) or `%LOCALAPPDATA%\Programs\fva\bin` (Windows) and adds the directory to your user `PATH`.
+
+### Pin a version
+
+```bash
+FVA_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh | bash
+```
+
+```powershell
+$env:FVA_VERSION = "v0.2.0"; irm https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1 | iex
+```
+
+### Manual download
+
+Download the archive for your platform from [Releases](https://github.com/Nergis0318/FVA/releases), verify against `SHA256SUMS.txt`, and place `fva` (or `fva.exe`) on your `PATH`.
+
+### Build from source
+
+Requires [Rust](https://rustup.rs/) 1.75+.
+
+```bash
+git clone https://github.com/Nergis0318/FVA.git
+cd FVA
+cargo build --release
+```
+
+Binary: `target/release/fva` (`.exe` on Windows).
+
+Intel Mac has no pre-built binary yet — use `cargo install --path .` or build from source.
+
+## Quick Start
+
+```bash
+# Verify install
+fva --version
+
+# Start MCP server (default mode)
+fva --path /path/to/project
+
+# Build full index (AST + vectors + call graph)
+fva index --path .
+
+# Check index status
+fva status --path .
+
+# CLI hybrid search
+fva search "authentication handler" --path . --limit 5
+```
+
+On first run, FVA creates a `.fva/` directory in the project root for indexes, frecency data, and vectors.
+
+## MCP Client Setup
+
+Add FVA to your MCP client config. Use the installed binary path on your system.
+
+**macOS / Linux**
+
+```json
+{
+  "mcpServers": {
+    "fva": {
+      "command": "fva",
+      "args": ["--path", "/path/to/your/project"],
+      "env": { "RUST_LOG": "info" }
+    }
+  }
+}
+```
+
+**Windows**
+
+```json
+{
+  "mcpServers": {
+    "fva": {
+      "command": "C:\\Users\\You\\AppData\\Local\\Programs\\fva\\bin\\fva.exe",
+      "args": ["--path", "D:\\Dev\\YourProject"],
+      "env": { "RUST_LOG": "info" }
+    }
+  }
+}
+```
+
+If `fva` is on `PATH`, the short `"command": "fva"` form works on all platforms.
+
+### Recommended agent prompt
+
+```
+For codebase exploration, use FVA MCP tools:
+- hybrid_search: default — combines file search + semantic + call graph
+- semantic_search: natural language concept search
+- get_smart_context: token-efficient context for a task
+- get_symbol_info / get_chunks: full function/class bodies
+- get_call_graph: callers and callees
+Prefer hybrid_search over repeated grep+read cycles.
+```
+
+## MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `hybrid_search` | **Default.** FFF + vector + graph fusion |
+| `semantic_search` | Natural language embedding search |
+| `find_files` | Fuzzy path search, frecency-ranked |
+| `grep` | Content search with definition expansion |
+| `get_chunks` | AST chunks by file or query |
+| `get_symbol_info` | Symbol lookup with full source |
+| `get_call_graph` | Callers/callees of a function |
+| `get_smart_context` | Token-budget smart context builder |
+| `index_status` | Full indexing statistics |
+
+## Configuration
+
+Copy `config.example.toml` to `config.toml` in the project root, or to `~/.config/fva/config.toml` for global defaults.
+
+```toml
+[embedding]
+provider = "local"    # "local" (default) or "voyage"
+model = "voyage-code-3"
+
+[vector]
+backend = "flat"      # file-backed cosine search
+db_path = "vectors"
+
+[query]
+fff_weight = 0.3
+vector_weight = 0.5
+graph_weight = 0.2
+max_context_tokens = 8000
+```
+
+CLI flags override config: `--path`, `--config`, `--log-level` / `RUST_LOG`.
+
+### Voyage API (optional)
+
+For higher-quality embeddings, switch provider and set your API key:
+
+```toml
+[embedding]
+provider = "voyage"
+```
+
+```bash
+export VOYAGE_API_KEY=your-key-here
+```
 
 ## Architecture
 
@@ -30,7 +209,7 @@ High-speed hybrid codebase intelligence engine for AI coding agents. Combines **
                 └──────────────────────────────┘
 ```
 
-## Features (Phases 1–4)
+## Development Status
 
 | Phase | Feature | Status |
 |-------|---------|--------|
@@ -39,93 +218,6 @@ High-speed hybrid codebase intelligence engine for AI coding agents. Combines **
 | 3 | Call graph + hybrid query engine | Done |
 | 4 | Full MCP tool set + CLI | Done |
 | 5 | Large-scale benchmarks + docs | Planned |
-
-## Quick Start
-
-```bash
-cargo build --release
-
-# MCP server (default)
-fva --path /path/to/project
-
-# Full index (AST + vectors + call graph)
-fva index --path .
-
-# Status
-fva status --path .
-
-# CLI hybrid search
-fva search "authentication handler" --path . --limit 5
-```
-
-## MCP Client Setup
-
-```json
-{
-  "mcpServers": {
-    "fva": {
-      "command": "D:\\Dev\\FVA\\target\\release\\fva.exe",
-      "args": ["--path", "D:\\Dev\\YourProject"],
-      "env": { "RUST_LOG": "info" }
-    }
-  }
-}
-```
-
-### Recommended Agent Prompt
-
-```
-For codebase exploration, use FVA MCP tools:
-- hybrid_search: default — combines file search + semantic + call graph
-- semantic_search: natural language concept search
-- get_smart_context: token-efficient context for a task
-- get_symbol_info / get_chunks: full function/class bodies
-- get_call_graph: callers and callees
-Prefer hybrid_search over repeated grep+read cycles.
-```
-
-## MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `hybrid_search` | **Default.** FFF + vector + graph fusion |
-| `semantic_search` | Natural language embedding search |
-| `find_files` | Fuzzy path search, frecency-ranked |
-| `grep` | Content search with definition expansion |
-| `get_chunks` | AST chunks by file or query |
-| `get_symbol_info` | Symbol lookup with full source |
-| `get_call_graph` | Callers/callees of a function |
-| `get_smart_context` | Token-budget smart context builder |
-| `index_status` | Full indexing statistics |
-
-## Configuration
-
-Copy `config.example.toml` to `config.toml`:
-
-```toml
-[embedding]
-provider = "local"    # "local" (default) or "voyage"
-model = "voyage-code-3"
-
-[vector]
-backend = "flat"        # file-backed cosine search
-db_path = ".fva/vectors"
-
-[query]
-fff_weight = 0.3
-vector_weight = 0.5
-graph_weight = 0.2
-max_context_tokens = 8000
-```
-
-### Voyage API (optional)
-
-```toml
-[embedding]
-provider = "voyage"
-```
-
-Set `VOYAGE_API_KEY` environment variable or `voyage_api_key` in config.
 
 ## Module Structure
 
@@ -155,9 +247,9 @@ src/
 
 ## Security
 
-- Sandboxed indexing (project root only)
+- Sandboxed indexing — project root only
 - No telemetry — all data stored locally in `.fva/`
-- Embeddings: local by default, Voyage only when explicitly configured
+- Embeddings are local by default; Voyage only when explicitly configured
 
 ## License
 

@@ -1,0 +1,40 @@
+{
+  "name": "browser_mouse_click_xy",
+  "description": "Click mouse button at a given position",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "x": {
+        "type": "number",
+        "description": "X coordinate"
+      },
+      "y": {
+        "type": "number",
+        "description": "Y coordinate"
+      },
+      "button": {
+        "description": "Button to click, defaults to left",
+        "type": "string",
+        "enum": [
+          "left",
+          "right",
+          "middle"
+        ]
+      },
+      "clickCount": {
+        "description": "Number of clicks, defaults to 1",
+        "type": "number"
+      },
+      "delay": {
+        "description": "Time to wait between mouse down and mouse up in milliseconds, defaults to 0",
+        "type": "number"
+      }
+    },
+    "required": [
+      "x",
+      "y"
+    ],
+    "additionalProperties": false
+  }
+}

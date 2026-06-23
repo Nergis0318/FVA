@@ -1,0 +1,33 @@
+{
+  "name": "browser_mouse_drag_xy",
+  "description": "Drag left mouse button to a given position",
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "startX": {
+        "type": "number",
+        "description": "Start X coordinate"
+      },
+      "startY": {
+        "type": "number",
+        "description": "Start Y coordinate"
+      },
+      "endX": {
+        "type": "number",
+        "description": "End X coordinate"
+      },
+      "endY": {
+        "type": "number",
+        "description": "End Y coordinate"
+      }
+    },
+    "required": [
+      "startX",
+      "startY",
+      "endX",
+      "endY"
+    ],
+    "additionalProperties": false
+  }
+}
