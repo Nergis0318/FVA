@@ -1,0 +1,11 @@
+{
+  "context_servers": {
+    "fva": {
+      "command": "fva",
+      "args": ["--path", "/path/to/your/project"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

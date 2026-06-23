@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "fva": {
+      "command": "fva",
+      "args": ["--path", "${CLAUDE_PROJECT_DIR:-.}"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

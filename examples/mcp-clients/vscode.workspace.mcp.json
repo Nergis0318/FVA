@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "fva": {
+      "type": "stdio",
+      "command": "fva",
+      "args": ["--path", "${workspaceFolder}"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "fva": {
+      "command": "fva",
+      "args": ["--path", "."],
+      "cwd": ".",
+      "env": {
+        "RUST_LOG": "info"
+      },
+      "timeout": 300000
+    }
+  }
+}

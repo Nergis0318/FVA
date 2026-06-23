@@ -1,0 +1,70 @@
+{
+  "description": "FVA MCP client setup examples. Copy the matching file to the install path for your agent tool.",
+  "install_paths": {
+    "cursor.project": {
+      "unix": "~/.cursor/mcp.json or <project>/.cursor/mcp.json",
+      "windows": "%USERPROFILE%\\.cursor\\mcp.json or <project>\\.cursor\\mcp.json",
+      "example": "cursor.project.mcp.json"
+    },
+    "cursor.project.windows": {
+      "windows": "<project>\\.cursor\\mcp.json",
+      "example": "cursor.project.windows.mcp.json"
+    },
+    "cursor.global": {
+      "unix": "~/.cursor/mcp.json",
+      "windows": "%USERPROFILE%\\.cursor\\mcp.json",
+      "example": "cursor.global.mcp.json"
+    },
+    "claude-desktop": {
+      "macos": "~/Library/Application Support/Claude/claude_desktop_config.json",
+      "linux": "~/.config/Claude/claude_desktop_config.json",
+      "windows": "%APPDATA%\\Claude\\claude_desktop_config.json",
+      "example_unix": "claude-desktop.macos-linux.json",
+      "example_windows": "claude-desktop.windows.json"
+    },
+    "claude-code": {
+      "project": "<project>/.mcp.json",
+      "example": "claude-code.project.mcp.json",
+      "cli": "claude mcp add --transport stdio fva -- fva --path ."
+    },
+    "vscode": {
+      "workspace": "<project>/.vscode/mcp.json",
+      "user": "MCP: Open User Configuration (profile folder)",
+      "example": "vscode.workspace.mcp.json",
+      "example_windows": "vscode.workspace.windows.mcp.json"
+    },
+    "windsurf": {
+      "unix": "~/.codeium/windsurf/mcp_config.json",
+      "windows": "%USERPROFILE%\\.codeium\\windsurf\\mcp_config.json",
+      "example": "windsurf.mcp_config.json",
+      "example_windows": "windsurf.windows.mcp_config.json"
+    },
+    "zed": {
+      "settings": "Zed settings.json (merge context_servers block)",
+      "example": "zed.context_servers.json",
+      "example_windows": "zed.windows.context_servers.json"
+    },
+    "continue": {
+      "workspace": "<project>/.continue/mcpServers/fva.yaml",
+      "example": "continue.fva.yaml"
+    },
+    "gemini-cli": {
+      "settings": "~/.gemini/settings.json (merge mcpServers block)",
+      "example": "gemini-cli.settings.json"
+    },
+    "cline": {
+      "settings": "Cline MCP settings (extension global storage or workspace)",
+      "example": "cline.mcp_settings.json"
+    },
+    "roo-code": {
+      "settings": "Roo Code MCP settings",
+      "example": "roo-code.mcp_settings.json"
+    }
+  },
+  "notes": [
+    "Replace /path/to/your/project with your project root.",
+    "On Windows, use the .windows.json variants or set the full path to fva.exe.",
+    "Run `fva index --path .` once before heavy search workloads.",
+    "Set VOYAGE_API_KEY in env when using provider = voyage in config.toml."
+  ]
+}

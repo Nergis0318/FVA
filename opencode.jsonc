@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "fva": {
+      "type": "local",
+      "command": ["fva", "--path", "."],
+    },
+  },
+}

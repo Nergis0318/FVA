@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fva": {
+      "type": "stdio",
+      "command": "${env:LOCALAPPDATA}\\Programs\\fva\\bin\\fva.exe",
+      "args": ["--path", "${workspaceFolder}"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

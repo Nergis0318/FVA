@@ -90,7 +90,21 @@ On first run, FVA creates a `.fva/` directory in the project root for indexes, f
 
 Add FVA to your MCP client config. Use the installed binary path on your system.
 
-**macOS / Linux**
+Ready-to-copy examples for each agent tool live in [`examples/mcp-clients/`](examples/mcp-clients/). See [`manifest.json`](examples/mcp-clients/manifest.json) for install paths.
+
+| Agent | Example file | Install location |
+|-------|--------------|------------------|
+| Cursor (project) | `cursor.project.mcp.json` | `<project>/.cursor/mcp.json` |
+| Claude Desktop | `claude-desktop.*.json` | OS-specific — see manifest |
+| Claude Code | `claude-code.project.mcp.json` | `<project>/.mcp.json` |
+| VS Code / Copilot | `vscode.workspace.mcp.json` | `<project>/.vscode/mcp.json` |
+| Windsurf / Cascade | `windsurf.mcp_config.json` | `~/.codeium/windsurf/mcp_config.json` |
+| Zed | `zed.context_servers.json` | Merge into Zed `settings.json` |
+| Continue | `continue.fva.yaml` | `<project>/.continue/mcpServers/` |
+| Gemini CLI | `gemini-cli.settings.json` | Merge into `~/.gemini/settings.json` |
+| Cline / Roo Code | `cline.mcp_settings.json` | Extension MCP settings |
+
+**macOS / Linux (generic `mcpServers` format)**
 
 ```json
 {

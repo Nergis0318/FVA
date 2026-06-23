@@ -1,0 +1,12 @@
+name: FVA MCP Server
+version: 0.1.0
+schema: v1
+mcpServers:
+  - name: FVA
+    type: stdio
+    command: fva
+    args:
+      - "--path"
+      - "."
+    env:
+      RUST_LOG: info

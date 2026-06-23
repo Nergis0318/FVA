@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "fva": {
+      "command": "C:\\Users\\You\\AppData\\Local\\Programs\\fva\\bin\\fva.exe",
+      "args": ["--path", "D:\\Dev\\YourProject"],
+      "env": {
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}
