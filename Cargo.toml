@@ -2,7 +2,7 @@
 name = "fva"
 version = "0.2.0"
 edition = "2021"
-description = "Fast Vector Agent — hybrid codebase intelligence engine for AI coding agents"
+description = "FFF · Vector · AST — hybrid codebase intelligence engine for AI coding agents"
 license = "MIT"
 readme = "README.md"
 keywords = ["mcp", "code-search", "tree-sitter", "vector-search", "ai-agent"]

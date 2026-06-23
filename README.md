@@ -1,6 +1,6 @@
-# FVA — Fast Vector Agent
+# FVA — FFF · Vector · AST
 
-High-speed hybrid codebase intelligence engine for AI coding agents. FVA combines **FFF** (fuzzy file search), **Tree-sitter** (AST chunking), **vector embeddings**, and **call graphs** into a single MCP server — so agents search by path, content, meaning, and structure in one pass.
+Hybrid codebase intelligence engine for AI coding agents. FVA combines **FFF** (fuzzy file search), **vector embeddings**, and **AST** chunking via Tree-sitter, plus call graphs, into a single MCP server — so agents search by path, content, meaning, and structure in one pass.
 
 ## Why FVA
 

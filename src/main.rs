@@ -15,7 +15,7 @@ use fva::query::context::ContextBuilder;
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-/// FVA — Fast Vector Agent: hybrid codebase intelligence for AI coding agents.
+/// FVA — FFF · Vector · AST: hybrid codebase intelligence for AI coding agents.
 #[derive(Parser)]
 #[command(name = "fva", version, about, long_about = None)]
 struct Cli {
@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     if matches!(cli.command, Some(Commands::Version)) {
-        println!("fva {} — Fast Vector Agent", env!("CARGO_PKG_VERSION"));
+        println!("fva {} — FFF · Vector · AST", env!("CARGO_PKG_VERSION"));
         println!("Phases 1-4: FFF + Tree-sitter + Vectors + Call Graph + MCP");
         return Ok(());
     }

@@ -12,7 +12,7 @@ use crate::indexer::chunker::{format_chunks_for_agent, ChunkSearchResult};
 use crate::query::context::ContextBuilder;
 
 pub const MCP_INSTRUCTIONS: &str = concat!(
-    "FVA (Fast Vector Agent) is a hybrid codebase intelligence engine.\n",
+    "FVA (FFF · Vector · AST) is a hybrid codebase intelligence engine.\n",
     "\n",
     "## Tools (use in this order)\n",
     "\n",
