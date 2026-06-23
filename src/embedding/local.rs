@@ -114,7 +114,9 @@ mod tests {
     #[test]
     fn embed_produces_normalized_vector() {
         let e = LocalEmbedder::new(128);
-        let v = e.embed_one("fn hello_world() { println!(\"hi\"); }").unwrap();
+        let v = e
+            .embed_one("fn hello_world() { println!(\"hi\"); }")
+            .unwrap();
         assert_eq!(v.len(), 128);
         let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 0.01);
@@ -123,9 +125,15 @@ mod tests {
     #[test]
     fn similar_code_has_higher_similarity() {
         let e = LocalEmbedder::new(256);
-        let a = e.embed_one("fn authenticate_user(token: &str) -> Result<User>").unwrap();
-        let b = e.embed_one("fn authenticate_user(session: &str) -> Result<User>").unwrap();
-        let c = e.embed_one("fn render_html_template(page: &str) -> String").unwrap();
+        let a = e
+            .embed_one("fn authenticate_user(token: &str) -> Result<User>")
+            .unwrap();
+        let b = e
+            .embed_one("fn authenticate_user(session: &str) -> Result<User>")
+            .unwrap();
+        let c = e
+            .embed_one("fn render_html_template(page: &str) -> String")
+            .unwrap();
         let sim_ab = super::super::cosine_similarity(&a, &b);
         let sim_ac = super::super::cosine_similarity(&a, &c);
         assert!(sim_ab > sim_ac);

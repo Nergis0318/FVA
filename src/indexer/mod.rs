@@ -128,8 +128,9 @@ impl Indexer {
             )));
         }
 
-        let relative = safe_relative_path(&self.root, file_path)
-            .ok_or_else(|| FvaError::Indexer(format!("path outside root: {}", file_path.display())))?;
+        let relative = safe_relative_path(&self.root, file_path).ok_or_else(|| {
+            FvaError::Indexer(format!("path outside root: {}", file_path.display()))
+        })?;
 
         let source = match std::fs::read_to_string(file_path) {
             Ok(s) => s,
@@ -156,7 +157,8 @@ impl Indexer {
         )?;
 
         let count = chunks.len();
-        self.store.upsert_file(&relative, chunks.clone(), &content_hash);
+        self.store
+            .upsert_file(&relative, chunks.clone(), &content_hash);
 
         // Phase 2: embed + vector index
         let _ = index_chunks(self.embedder.as_ref(), self.vectors.as_ref(), &chunks);

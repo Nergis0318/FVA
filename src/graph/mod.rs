@@ -239,8 +239,7 @@ impl CallGraphStore {
 
         let mut result = Vec::new();
         let mut visited = std::collections::HashSet::new();
-        let mut queue: Vec<(NodeIndex, usize)> =
-            start_indices.iter().map(|&i| (i, 0)).collect();
+        let mut queue: Vec<(NodeIndex, usize)> = start_indices.iter().map(|&i| (i, 0)).collect();
 
         while let Some((node, d)) = queue.pop() {
             if d > depth || !visited.insert(node) {

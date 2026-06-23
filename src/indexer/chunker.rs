@@ -35,10 +35,7 @@ impl CodeChunk {
         let line_count = raw.content.lines().count();
         let id = format!(
             "{}:{}:{}-{}",
-            relative_path,
-            raw.name,
-            raw.start_line,
-            raw.end_line
+            relative_path, raw.name, raw.start_line, raw.end_line
         );
 
         Self {
@@ -133,10 +130,7 @@ pub fn format_chunks_for_agent(chunks: &[CodeChunk], include_content: bool) -> S
         lines.push(header);
 
         if include_content {
-            lines.push(format!(
-                "```{}\n{}\n```",
-                chunk.language, chunk.content
-            ));
+            lines.push(format!("```{}\n{}\n```", chunk.language, chunk.content));
         }
         lines.push(String::new());
     }

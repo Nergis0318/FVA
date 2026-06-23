@@ -167,7 +167,9 @@ impl FvaServer {
             lines.push(format!("offset: {next_offset}"));
         }
 
-        Ok(CallToolResult::success(vec![Content::text(lines.join("\n"))]))
+        Ok(CallToolResult::success(vec![Content::text(
+            lines.join("\n"),
+        )]))
     }
 
     #[tool(
@@ -188,7 +190,9 @@ impl FvaServer {
             .map_err(|e| ErrorData::internal_error(format!("grep failed: {e}"), None))?;
 
         if result.matches.is_empty() {
-            return Ok(CallToolResult::success(vec![Content::text("0 matches.".to_string())]));
+            return Ok(CallToolResult::success(vec![Content::text(
+                "0 matches.".to_string(),
+            )]));
         }
 
         let mut lines = vec![format!("{} matches", result.matches.len())];
@@ -204,7 +208,9 @@ impl FvaServer {
             lines.push(format!("\noffset: {}", result.next_file_offset));
         }
 
-        Ok(CallToolResult::success(vec![Content::text(lines.join("\n"))]))
+        Ok(CallToolResult::success(vec![Content::text(
+            lines.join("\n"),
+        )]))
     }
 
     #[tool(
@@ -281,10 +287,13 @@ impl FvaServer {
         Parameters(params): Parameters<SemanticSearchParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let result = self.engine.query.semantic_search(&params.query, max_results);
-        Ok(CallToolResult::success(vec![Content::text(format_hybrid_result(
-            &result,
-        ))]))
+        let result = self
+            .engine
+            .query
+            .semantic_search(&params.query, max_results);
+        Ok(CallToolResult::success(vec![Content::text(
+            format_hybrid_result(&result),
+        )]))
     }
 
     #[tool(
@@ -302,9 +311,9 @@ impl FvaServer {
             result.hits.retain(|h| h.relative_path.contains(path));
         }
 
-        Ok(CallToolResult::success(vec![Content::text(format_hybrid_result(
-            &result,
-        ))]))
+        Ok(CallToolResult::success(vec![Content::text(
+            format_hybrid_result(&result),
+        )]))
     }
 
     #[tool(
@@ -319,7 +328,10 @@ impl FvaServer {
         let callers = self.engine.graph.callers(&params.function, depth);
         let callees = self.engine.graph.callees(&params.function, depth);
 
-        let mut lines = vec![format!("Call graph for `{}` (depth={depth}):", params.function)];
+        let mut lines = vec![format!(
+            "Call graph for `{}` (depth={depth}):",
+            params.function
+        )];
 
         lines.push("\n## Callers".into());
         if callers.is_empty() {
@@ -344,7 +356,9 @@ impl FvaServer {
             }
         }
 
-        Ok(CallToolResult::success(vec![Content::text(lines.join("\n"))]))
+        Ok(CallToolResult::success(vec![Content::text(
+            lines.join("\n"),
+        )]))
     }
 
     #[tool(

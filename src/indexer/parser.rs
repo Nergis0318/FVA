@@ -225,10 +225,9 @@ impl AstParser {
             return Ok(None);
         }
 
-        let parser = self
-            .parsers
-            .get_mut(&language)
-            .ok_or_else(|| FvaError::Parser(format!("unsupported language: {}", language.as_str())))?;
+        let parser = self.parsers.get_mut(&language).ok_or_else(|| {
+            FvaError::Parser(format!("unsupported language: {}", language.as_str()))
+        })?;
 
         let tree = parser
             .parse(source, None)
@@ -329,9 +328,7 @@ pub struct RawChunk {
 }
 
 fn is_overlapping(ranges: &[(usize, usize)], start: usize, end: usize) -> bool {
-    ranges
-        .iter()
-        .any(|(s, e)| start < *e && end > *s)
+    ranges.iter().any(|(s, e)| start < *e && end > *s)
 }
 
 /// Fallback: split file into line-based chunks when AST extraction fails.

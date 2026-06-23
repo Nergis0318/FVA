@@ -6,14 +6,14 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use fff_query_parser::AiGrepConfig;
 use fff_search::file_picker::FilePicker;
 use fff_search::frecency::FrecencyTracker;
-use fff_search::grep::{GrepMode, GrepSearchOptions, has_regex_metacharacters};
+use fff_search::grep::{has_regex_metacharacters, GrepMode, GrepSearchOptions};
 use fff_search::{
     FFFMode, FilePickerOptions, FuzzySearchOptions, PaginationArgs, QueryParser, QueryTracker,
     SharedFilePicker, SharedFrecency, SharedQueryTracker,
 };
-use fff_query_parser::AiGrepConfig;
 use git2::Repository;
 use parking_lot::RwLock;
 
@@ -140,12 +140,7 @@ impl FffEngine {
         self.base_path.read().clone()
     }
 
-    pub fn find_files(
-        &self,
-        query: &str,
-        offset: usize,
-        limit: usize,
-    ) -> Result<FindFilesOutput> {
+    pub fn find_files(&self, query: &str, offset: usize, limit: usize) -> Result<FindFilesOutput> {
         let guard = self.picker.read()?;
         let picker = guard
             .as_ref()

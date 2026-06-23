@@ -43,11 +43,6 @@ jobs:
             target: aarch64-apple-darwin
             artifact_name: fva-macos-arm64
             archive_ext: tar.gz
-          - os: ubuntu-latest
-            target: x86_64-apple-darwin
-            artifact_name: fva-macos-amd64
-            archive_ext: tar.gz
-            cross: macos
 
     steps:
       - name: Checkout
@@ -61,23 +56,9 @@ jobs:
       - name: Cache cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install zig
-        if: matrix.cross == 'macos'
-        uses: mlugg/setup-zig@v2
-
-      - name: Install cargo-zigbuild
-        if: matrix.cross == 'macos'
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-zigbuild
-
       - name: Build
         if: matrix.cross != 'macos'
         run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Build (macOS amd64 cross-compile)
-        if: matrix.cross == 'macos'
-        run: cargo zigbuild --release --target ${{ matrix.target }}
 
       - name: Package (Unix)
         if: runner.os != 'Windows'

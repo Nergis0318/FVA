@@ -131,9 +131,7 @@ impl ChunkStore {
 
         let files = self.chunks_by_file.read();
         ids.iter()
-            .filter_map(|id| {
-                files.values().flatten().find(|c| &c.id == id).cloned()
-            })
+            .filter_map(|id| files.values().flatten().find(|c| &c.id == id).cloned())
             .collect()
     }
 

@@ -52,6 +52,9 @@ fn indexer_finds_rust_sources() {
     let count = indexer.index_all().expect("index_all should succeed");
     let stats = indexer.stats();
 
-    assert!(stats.indexed_files > 0, "expected indexed files, stats={stats:?}");
+    assert!(
+        stats.indexed_files > 0,
+        "expected indexed files, stats={stats:?}"
+    );
     assert!(stats.total_chunks > 0, "expected chunks, count={count}");
 }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use rmcp::{ServiceExt, transport::stdio};
+use rmcp::{transport::stdio, ServiceExt};
 use tracing_subscriber::{fmt, EnvFilter};
 
 use fva::config::Config;
@@ -60,8 +60,7 @@ fn init_logging(config: &Config, cli_level: Option<&str>) {
         .or(Some(config.mcp.log_level.as_str()))
         .unwrap_or("info");
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(level));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level));
 
     if config.mcp.log_file.is_empty() {
         fmt().with_env_filter(filter).with_target(false).init();
@@ -125,10 +124,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match cli.command.unwrap_or(Commands::Serve) {
         Commands::Index => {
             let count = engine.indexer.index_all()?;
-            println!(
-                "Indexed {count} chunks — {:?}",
-                engine.indexer.stats()
-            );
+            println!("Indexed {count} chunks — {:?}", engine.indexer.stats());
             println!("Vectors: {:?}", engine.vectors.stats());
             println!("Graph: {:?}", engine.graph.stats());
             engine.shutdown();
