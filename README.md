@@ -16,10 +16,10 @@ Most agent workflows chain `grep` → `read_file` → repeat. FVA replaces that 
 Pre-built binaries are published on [GitHub Releases](https://github.com/Nergis0318/FVA/releases) for:
 
 | Platform | amd64 | arm64 |
-|----------|-------|-------|
-| Linux | ✓ | ✓ |
-| Windows | ✓ | ✓ |
-| macOS | — | ✓ |
+| -------- | ----- | ----- |
+| Linux    | ✓     | ✓     |
+| Windows  | ✓     | ✓     |
+| macOS    | —     | ✓     |
 
 ### One-liner
 
@@ -92,17 +92,17 @@ Add FVA to your MCP client config. Use the installed binary path on your system.
 
 Ready-to-copy examples for each agent tool live in [`examples/mcp-clients/`](examples/mcp-clients/). See [`manifest.json`](examples/mcp-clients/manifest.json) for install paths.
 
-| Agent | Example file | Install location |
-|-------|--------------|------------------|
-| Cursor (project) | `cursor.project.mcp.json` | `<project>/.cursor/mcp.json` |
-| Claude Desktop | `claude-desktop.*.json` | OS-specific — see manifest |
-| Claude Code | `claude-code.project.mcp.json` | `<project>/.mcp.json` |
-| VS Code / Copilot | `vscode.workspace.mcp.json` | `<project>/.vscode/mcp.json` |
-| Windsurf / Cascade | `windsurf.mcp_config.json` | `~/.codeium/windsurf/mcp_config.json` |
-| Zed | `zed.context_servers.json` | Merge into Zed `settings.json` |
-| Continue | `continue.fva.yaml` | `<project>/.continue/mcpServers/` |
-| Gemini CLI | `gemini-cli.settings.json` | Merge into `~/.gemini/settings.json` |
-| Cline / Roo Code | `cline.mcp_settings.json` | Extension MCP settings |
+| Agent              | Example file                   | Install location                      |
+| ------------------ | ------------------------------ | ------------------------------------- |
+| Cursor (project)   | `cursor.project.mcp.json`      | `<project>/.cursor/mcp.json`          |
+| Claude Desktop     | `claude-desktop.*.json`        | OS-specific — see manifest            |
+| Claude Code        | `claude-code.project.mcp.json` | `<project>/.mcp.json`                 |
+| VS Code / Copilot  | `vscode.workspace.mcp.json`    | `<project>/.vscode/mcp.json`          |
+| Windsurf / Cascade | `windsurf.mcp_config.json`     | `~/.codeium/windsurf/mcp_config.json` |
+| Zed                | `zed.context_servers.json`     | Merge into Zed `settings.json`        |
+| Continue           | `continue.fva.yaml`            | `<project>/.continue/mcpServers/`     |
+| Gemini CLI         | `gemini-cli.settings.json`     | Merge into `~/.gemini/settings.json`  |
+| Cline / Roo Code   | `cline.mcp_settings.json`      | Extension MCP settings                |
 
 **macOS / Linux (generic `mcpServers` format)**
 
@@ -148,17 +148,17 @@ Prefer hybrid_search over repeated grep+read cycles.
 
 ## MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `hybrid_search` | **Default.** FFF + vector + graph fusion |
-| `semantic_search` | Natural language embedding search |
-| `find_files` | Fuzzy path search, frecency-ranked |
-| `grep` | Content search with definition expansion |
-| `get_chunks` | AST chunks by file or query |
-| `get_symbol_info` | Symbol lookup with full source |
-| `get_call_graph` | Callers/callees of a function |
-| `get_smart_context` | Token-budget smart context builder |
-| `index_status` | Full indexing statistics |
+| Tool                | Description                              |
+| ------------------- | ---------------------------------------- |
+| `hybrid_search`     | **Default.** FFF + vector + graph fusion |
+| `semantic_search`   | Natural language embedding search        |
+| `find_files`        | Fuzzy path search, frecency-ranked       |
+| `grep`              | Content search with definition expansion |
+| `get_chunks`        | AST chunks by file or query              |
+| `get_symbol_info`   | Symbol lookup with full source           |
+| `get_call_graph`    | Callers/callees of a function            |
+| `get_smart_context` | Token-budget smart context builder       |
+| `index_status`      | Full indexing statistics                 |
 
 ## Configuration
 
@@ -225,13 +225,13 @@ export VOYAGE_API_KEY=your-key-here
 
 ## Development Status
 
-| Phase | Feature | Status |
-|-------|---------|--------|
-| 1 | FFF MCP + Tree-sitter chunking | Done |
-| 2 | Embedding pipeline + vector store | Done |
-| 3 | Call graph + hybrid query engine | Done |
-| 4 | Full MCP tool set + CLI | Done |
-| 5 | Large-scale benchmarks + docs | Planned |
+| Phase | Feature                           | Status  |
+| ----- | --------------------------------- | ------- |
+| 1     | FFF MCP + Tree-sitter chunking    | Done    |
+| 2     | Embedding pipeline + vector store | Done    |
+| 3     | Call graph + hybrid query engine  | Done    |
+| 4     | Full MCP tool set + CLI           | Done    |
+| 5     | Large-scale benchmarks + docs     | Planned |
 
 ## Module Structure
 
@@ -250,14 +250,14 @@ src/
 
 ## Performance Targets
 
-| Operation | Target | Notes |
-|-----------|--------|-------|
-| File search (100k files) | < 50ms | FFF frecency + SIMD |
-| Grep (warm index) | < 100ms | mmap + content index |
-| AST chunk (single file) | < 5ms | Tree-sitter |
-| Vector search (10k chunks) | < 50ms | flat brute-force |
-| Hybrid search | < 200ms | 3-stage fusion |
-| Full index (10k files) | < 30s | rayon parallel |
+| Operation                  | Target  | Notes                |
+| -------------------------- | ------- | -------------------- |
+| File search (100k files)   | < 50ms  | FFF frecency + SIMD  |
+| Grep (warm index)          | < 100ms | mmap + content index |
+| AST chunk (single file)    | < 5ms   | Tree-sitter          |
+| Vector search (10k chunks) | < 50ms  | flat brute-force     |
+| Hybrid search              | < 200ms | 3-stage fusion       |
+| Full index (10k files)     | < 30s   | rayon parallel       |
 
 ## Security
 
