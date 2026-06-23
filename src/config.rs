@@ -308,6 +308,11 @@ impl Config {
         if let Some(config_dir) = dirs::config_dir() {
             paths.push(config_dir.join("fva").join("config.toml"));
         }
+        // Cross-platform XDG-style path (~/.config/fva/config.toml). On Windows,
+        // dirs::config_dir() resolves to %APPDATA% (Roaming), not ~/.config.
+        if let Some(home) = dirs::home_dir() {
+            paths.push(home.join(".config").join("fva").join("config.toml"));
+        }
         paths
     }
 
@@ -321,5 +326,43 @@ impl Config {
 
     pub fn resolve_data_dir(&self, root: &Path) -> PathBuf {
         root.join(".fva")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_search_paths_include_xdg_home_config() {
+        let paths = Config::config_search_paths();
+        let xdg = dirs::home_dir()
+            .expect("home dir")
+            .join(".config")
+            .join("fva")
+            .join("config.toml");
+        assert!(
+            paths.contains(&xdg),
+            "expected XDG path in search list: {}",
+            xdg.display()
+        );
+    }
+
+    #[test]
+    fn loads_global_xdg_config_when_no_local_config() {
+        let xdg = dirs::home_dir()
+            .expect("home dir")
+            .join(".config")
+            .join("fva")
+            .join("config.toml");
+        if !xdg.exists() {
+            return;
+        }
+
+        let config = Config::load(None).expect("load config");
+        assert_eq!(
+            config.embedding.provider, "voyage",
+            "global ~/.config/fva/config.toml should set embedding.provider"
+        );
     }
 }
