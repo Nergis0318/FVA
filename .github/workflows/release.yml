@@ -110,6 +110,6 @@ jobs:
           files: dist/*
 
       - name: Promote to latest release
-        run: gh release edit "${{ github.event.release.tag_name }}" --prerelease=false --latest
+        run: gh release edit "${{ github.event.release.tag_name }}" --repo "${{ github.repository }}" --prerelease=false --latest
         env:
           GH_TOKEN: ${{ github.token }}
