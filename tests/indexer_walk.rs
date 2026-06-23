@@ -4,8 +4,8 @@ use std::sync::Arc;
 use fva::config::{Config, IndexerConfig};
 use fva::embedding::build_embedder;
 use fva::graph::CallGraphStore;
-use fva::indexer::parser::is_indexable;
 use fva::indexer::Indexer;
+use fva::indexer::parser::is_indexable;
 use fva::vector::build_vector_store;
 use ignore::WalkBuilder;
 

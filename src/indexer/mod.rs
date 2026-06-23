@@ -13,13 +13,13 @@ use parking_lot::RwLock;
 use rayon::prelude::*;
 
 use self::chunker::chunk_file;
-use self::parser::{is_indexable, AstParser};
-use self::store::{safe_relative_path, ChunkStore, IndexStats};
+use self::parser::{AstParser, is_indexable};
+use self::store::{ChunkStore, IndexStats, safe_relative_path};
 use crate::config::IndexerConfig;
 use crate::embedding::Embedder;
 use crate::error::{FvaError, Result};
 use crate::graph::CallGraphStore;
-use crate::vector::{index_chunks, VectorStore};
+use crate::vector::{VectorStore, index_chunks};
 
 /// Shared indexer state.
 #[derive(Clone)]

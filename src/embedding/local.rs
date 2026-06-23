@@ -3,7 +3,7 @@
 //! Uses feature hashing (similar to HashingVectorizer) for fast,
 //! deterministic embeddings suitable for code semantic search.
 
-use super::{normalize, Embedder};
+use super::{Embedder, normalize};
 use crate::error::Result;
 
 pub struct LocalEmbedder {

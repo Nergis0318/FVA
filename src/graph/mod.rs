@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 
 use bincode::{deserialize, serialize};
 use parking_lot::RwLock;
-use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::Direction;
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{FvaError, Result};
@@ -53,7 +53,11 @@ pub enum GraphDelta {
     /// Remove a symbol node from the graph
     RemoveNode(SymbolId),
     /// Add a call edge between symbols
-    AddEdge { caller: SymbolId, callee: String, line: usize },
+    AddEdge {
+        caller: SymbolId,
+        callee: String,
+        line: usize,
+    },
     /// Remove all nodes belonging to a file
     RemoveFile(String),
 }
@@ -357,15 +361,15 @@ impl CallGraphStore {
             callee_names,
         };
 
-        let bytes = serialize(&snapshot)
-            .map_err(|e| FvaError::Other(format!("graph serialize: {e}")))?;
+        let bytes =
+            serialize(&snapshot).map_err(|e| FvaError::Other(format!("graph serialize: {e}")))?;
         std::fs::write(&self.path, bytes)?;
-        
+
         // Clear delta log after full snapshot
         if self.delta_path.exists() {
             std::fs::remove_file(&self.delta_path)?;
         }
-        
+
         tracing::info!(
             "persisted call graph: {} nodes, {} edges",
             snapshot.nodes.len(),
@@ -376,27 +380,27 @@ impl CallGraphStore {
 
     /// Record a delta operation to the delta log
     fn record_delta(&self, delta: GraphDelta) -> Result<()> {
-        let bytes = serialize(&delta)
-            .map_err(|e| FvaError::Other(format!("delta serialize: {e}")))?;
-        
+        let bytes =
+            serialize(&delta).map_err(|e| FvaError::Other(format!("delta serialize: {e}")))?;
+
         // Create delta directory if needed
         if let Some(parent) = self.delta_path.parent() {
             if !parent.exists() {
                 std::fs::create_dir_all(parent)?;
             }
         }
-        
+
         // Append delta to log file
         let mut file = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&self.delta_path)?;
-        
+
         // Write delta size (u32) followed by delta bytes
         let size = bytes.len() as u32;
         file.write_all(&size.to_le_bytes())?;
         file.write_all(&bytes)?;
-        
+
         Ok(())
     }
 
@@ -405,10 +409,10 @@ impl CallGraphStore {
         if !self.delta_path.exists() {
             return Ok(());
         }
-        
+
         let bytes = std::fs::read(&self.delta_path)?;
         let mut offset = 0;
-        
+
         while offset < bytes.len() {
             // Read size (u32)
             if offset + 4 > bytes.len() {
@@ -421,20 +425,20 @@ impl CallGraphStore {
                 bytes[offset + 3],
             ]) as usize;
             offset += 4;
-            
+
             // Read delta
             if offset + size > bytes.len() {
                 break; // Incomplete delta
             }
             let delta_bytes = &bytes[offset..offset + size];
-            
+
             if let Ok(delta) = deserialize::<GraphDelta>(delta_bytes) {
                 self.apply_delta(delta)?;
             }
-            
+
             offset += size;
         }
-        
+
         Ok(())
     }
 
@@ -445,11 +449,11 @@ impl CallGraphStore {
                 let mut graph = self.graph.write();
                 let mut node_index = self.node_index.write();
                 let mut callee_index = self.callee_index.write();
-                
+
                 if node_index.contains_key(&symbol) {
                     return Ok(()); // Already exists
                 }
-                
+
                 let idx = graph.add_node(symbol.clone());
                 node_index.insert(symbol.clone(), idx);
                 callee_index
@@ -461,7 +465,7 @@ impl CallGraphStore {
                 let mut graph = self.graph.write();
                 let mut node_index = self.node_index.write();
                 let mut callee_index = self.callee_index.write();
-                
+
                 if let Some(idx) = node_index.remove(&symbol) {
                     let _ = graph.remove_node(idx);
                 }
@@ -469,7 +473,11 @@ impl CallGraphStore {
                     indices.retain(|&i| node_index.values().any(|&v| v == i));
                 }
             }
-            GraphDelta::AddEdge { caller, callee, line } => {
+            GraphDelta::AddEdge {
+                caller,
+                callee,
+                line,
+            } => {
                 // Use add_edge to ensure proper indexing
                 let _ = self.add_edge(&caller, &callee, line);
             }
@@ -477,13 +485,13 @@ impl CallGraphStore {
                 let mut graph = self.graph.write();
                 let mut node_index = self.node_index.write();
                 let mut callee_index = self.callee_index.write();
-                
+
                 let to_remove: Vec<SymbolId> = node_index
                     .keys()
                     .filter(|s| s.file == path)
                     .cloned()
                     .collect();
-                
+
                 for symbol in to_remove {
                     if let Some(idx) = node_index.remove(&symbol) {
                         let _ = graph.remove_node(idx);

@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::*;
-use rmcp::{schemars, tool, tool_handler, tool_router, ErrorData, ServerHandler};
+use rmcp::{ErrorData, ServerHandler, schemars, tool, tool_handler, tool_router};
 use serde::Deserialize;
 
 use crate::engine::FvaEngine;
-use crate::indexer::chunker::{format_chunks_for_agent, ChunkSearchResult};
+use crate::indexer::chunker::{ChunkSearchResult, format_chunks_for_agent};
 use crate::query::context::ContextBuilder;
 
 pub const MCP_INSTRUCTIONS: &str = concat!(

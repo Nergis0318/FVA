@@ -3,8 +3,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use rmcp::{transport::stdio, ServiceExt};
-use tracing_subscriber::{fmt, EnvFilter};
+use rmcp::{ServiceExt, transport::stdio};
+use tracing_subscriber::{EnvFilter, fmt};
 
 use fva::config::Config;
 use fva::engine::FvaEngine;
@@ -53,6 +53,16 @@ enum Commands {
     },
     /// Print version info.
     Version,
+    /// Upgrade FVA to the latest release.
+    #[command(alias = "update")]
+    Upgrade {
+        /// Install a specific release tag (e.g. v0.2.0) instead of latest.
+        #[arg(long, value_name = "TAG")]
+        version: Option<String>,
+        /// Reinstall even if already on the target version.
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 fn init_logging(config: &Config, cli_level: Option<&str>) {
@@ -100,6 +110,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if matches!(cli.command, Some(Commands::Version)) {
         println!("fva {} — FFF · Vector · AST", env!("CARGO_PKG_VERSION"));
         println!("Phases 1-4: FFF + Tree-sitter + Vectors + Call Graph + MCP");
+        return Ok(());
+    }
+
+    if let Some(Commands::Upgrade { version, force }) = &cli.command {
+        fva::upgrade::run(version.as_deref(), *force)?;
         return Ok(());
     }
 
@@ -157,6 +172,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         Commands::Version => unreachable!("version handled above"),
+
+        Commands::Upgrade { .. } => unreachable!("upgrade handled above"),
 
         Commands::Serve => {
             engine.indexer.spawn_background_index();

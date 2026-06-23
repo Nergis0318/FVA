@@ -9,7 +9,7 @@ use std::time::Duration;
 use fff_query_parser::AiGrepConfig;
 use fff_search::file_picker::FilePicker;
 use fff_search::frecency::FrecencyTracker;
-use fff_search::grep::{has_regex_metacharacters, GrepMode, GrepSearchOptions};
+use fff_search::grep::{GrepMode, GrepSearchOptions, has_regex_metacharacters};
 use fff_search::{
     FFFMode, FilePickerOptions, FuzzySearchOptions, PaginationArgs, QueryParser, QueryTracker,
     SharedFilePicker, SharedFrecency, SharedQueryTracker,

@@ -4,13 +4,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::config::Config;
-use crate::embedding::{build_embedder, Embedder};
+use crate::embedding::{Embedder, build_embedder};
 use crate::error::Result;
 use crate::fff::FffEngine;
 use crate::graph::CallGraphStore;
 use crate::indexer::Indexer;
 use crate::query::{ContextBuilder, HybridQueryEngine};
-use crate::vector::{build_vector_store, VectorStore};
+use crate::vector::{VectorStore, build_vector_store};
 
 /// Central FVA engine holding all subsystems.
 pub struct FvaEngine {

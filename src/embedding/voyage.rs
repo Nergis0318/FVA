@@ -1,6 +1,6 @@
 //! Voyage AI embedding provider (voyage-code-3).
 
-use super::{normalize, Embedder};
+use super::{Embedder, normalize};
 use crate::error::{FvaError, Result};
 use serde::{Deserialize, Serialize};
 
