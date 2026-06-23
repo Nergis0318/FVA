@@ -145,7 +145,7 @@ impl Indexer {
 
         // Remove stale vector/graph data
         let _ = self.vectors.remove_file(&relative);
-        self.graph.remove_file(&relative);
+        let _ = self.graph.remove_file(&relative);
 
         let mut parser = self.parser.write();
         let chunks = chunk_file(
