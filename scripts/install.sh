@@ -123,24 +123,25 @@ asset_url() {
 }
 
 verify_checksum() {
-  local archive="$1"
+  local archive_path="$1"
   local sums="$2"
-  local expected actual
+  local archive_name expected actual
 
-  grep -q "${archive}" "${sums}" || die "checksum entry not found for ${archive}"
+  archive_name="$(basename "${archive_path}")"
+  grep -q "${archive_name}" "${sums}" || die "checksum entry not found for ${archive_name}"
 
   if have_cmd sha256sum; then
-    expected="$(grep "${archive}" "${sums}" | awk '{print $1}')"
-    actual="$(sha256sum "${archive}" | awk '{print $1}')"
+    expected="$(grep "${archive_name}" "${sums}" | awk '{print $1}')"
+    actual="$(sha256sum "${archive_path}" | awk '{print $1}')"
   elif have_cmd shasum; then
-    expected="$(grep "${archive}" "${sums}" | awk '{print $1}')"
-    actual="$(shasum -a 256 "${archive}" | awk '{print $1}')"
+    expected="$(grep "${archive_name}" "${sums}" | awk '{print $1}')"
+    actual="$(shasum -a 256 "${archive_path}" | awk '{print $1}')"
   else
     log "sha256sum/shasum not found; skipping checksum verification"
     return 0
   fi
 
-  [[ "${expected}" == "${actual}" ]] || die "checksum mismatch for ${archive}"
+  [[ "${expected}" == "${actual}" ]] || die "checksum mismatch for ${archive_name}"
   log "checksum verified"
 }
 
@@ -148,7 +149,7 @@ install_binary() {
   local workdir archive sums
 
   workdir="$(mktemp -d)"
-  trap 'rm -rf "${workdir}"' EXIT
+  trap "rm -rf '${workdir}'" EXIT
 
   archive="${ARTIFACT}.${ARCHIVE_EXT}"
   sums="SHA256SUMS.txt"
@@ -158,7 +159,7 @@ install_binary() {
 
   log "downloading checksums"
   if download "$(asset_url "${sums}")" "${workdir}/${sums}" 2>/dev/null; then
-    verify_checksum "${archive}" "${workdir}/${sums}"
+    verify_checksum "${workdir}/${archive}" "${workdir}/${sums}"
   else
     log "checksum file unavailable; skipping verification"
   fi
