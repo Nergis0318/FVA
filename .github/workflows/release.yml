@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.artifact_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: fva-linux-amd64
+            archive_ext: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            artifact_name: fva-linux-arm64
+            archive_ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: fva-windows-amd64
+            archive_ext: zip
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            artifact_name: fva-windows-arm64
+            archive_ext: zip
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: fva-macos-arm64
+            archive_ext: tar.gz
+          - os: ubuntu-latest
+            target: x86_64-apple-darwin
+            artifact_name: fva-macos-amd64
+            archive_ext: tar.gz
+            cross: macos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install zig
+        if: matrix.cross == 'macos'
+        uses: mlugg/setup-zig@v2
+
+      - name: Install cargo-zigbuild
+        if: matrix.cross == 'macos'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+
+      - name: Build
+        if: matrix.cross != 'macos'
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Build (macOS amd64 cross-compile)
+        if: matrix.cross == 'macos'
+        run: cargo zigbuild --release --target ${{ matrix.target }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          tar czf "dist/${{ matrix.artifact_name }}.${{ matrix.archive_ext }}" \
+            -C "target/${{ matrix.target }}/release" fva
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $bin = "target\${{ matrix.target }}\release\fva.exe"
+          Compress-Archive -Path $bin -DestinationPath "dist\${{ matrix.artifact_name }}.${{ matrix.archive_ext }}" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: dist
+        run: |
+          sha256sum fva-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

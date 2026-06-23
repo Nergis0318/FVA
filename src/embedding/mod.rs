@@ -1,0 +1,73 @@
+//! Embedding providers for semantic code search.
+
+mod local;
+mod voyage;
+
+use std::sync::Arc;
+
+pub use local::LocalEmbedder;
+pub use voyage::VoyageEmbedder;
+
+use crate::config::EmbeddingConfig;
+use crate::error::{FvaError, Result};
+
+/// Embedding provider trait.
+pub trait Embedder: Send + Sync {
+    fn name(&self) -> &str;
+    fn dimensions(&self) -> usize;
+    fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>>;
+    fn embed_one(&self, text: &str) -> Result<Vec<f32>> {
+        let results = self.embed(&[text.to_string()])?;
+        results
+            .into_iter()
+            .next()
+            .ok_or_else(|| FvaError::Other("empty embedding result".into()))
+    }
+}
+
+/// Build embedder from configuration.
+pub fn build_embedder(config: &EmbeddingConfig) -> Result<Arc<dyn Embedder>> {
+    let api_key = if config.voyage_api_key.is_empty() {
+        std::env::var("VOYAGE_API_KEY").unwrap_or_default()
+    } else {
+        config.voyage_api_key.clone()
+    };
+
+    let embedder: Arc<dyn Embedder> = match config.provider.as_str() {
+        "voyage" if !api_key.is_empty() => Arc::new(VoyageEmbedder::new(
+            api_key,
+            config.model.clone(),
+            config.dimensions,
+        )?),
+        "voyage" => {
+            tracing::warn!("voyage provider requested but no API key — falling back to local");
+            Arc::new(LocalEmbedder::new(config.dimensions))
+        }
+        "local" | "none" | "hash" => Arc::new(LocalEmbedder::new(config.dimensions)),
+        other => {
+            return Err(FvaError::Config(format!(
+                "unknown embedding provider: {other}"
+            )));
+        }
+    };
+
+    Ok(embedder)
+}
+
+/// L2-normalize a vector in place.
+pub fn normalize(v: &mut [f32]) {
+    let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if norm > 1e-10 {
+        for x in v.iter_mut() {
+            *x /= norm;
+        }
+    }
+}
+
+/// Cosine similarity between two L2-normalized vectors.
+pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() {
+        return 0.0;
+    }
+    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+}

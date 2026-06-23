@@ -1,0 +1,74 @@
+# FVA — Fast Vector Agent configuration
+# Copy to config.toml or place at ~/.config/fva/config.toml
+
+[project]
+# Root directory to index (overridden by CLI --path)
+root = "."
+
+[indexer]
+# Enable background file watcher
+watch = true
+# Debounce file change events (milliseconds)
+debounce_ms = 300
+# Maximum file size to parse (bytes)
+max_file_size = 10485760  # 10 MB
+# Languages to index (empty = all supported)
+languages = []
+# Respect .gitignore
+respect_gitignore = true
+# Boost recently modified git files
+git_boost = true
+
+[fff]
+# Frecency database path (LMDB)
+frecency_db = ".fva/frecency"
+# Query history database path
+history_db = ".fva/history"
+# Maximum cached file contents in memory
+max_cached_files = 30000
+# Enable mmap warmup for faster grep
+enable_warmup = true
+# Enable content index for grep
+enable_content_indexing = true
+
+[embedding]
+# Provider: "local" (default, no API) | "voyage" (requires API key)
+provider = "local"
+# Voyage API key (env: VOYAGE_API_KEY)
+voyage_api_key = ""
+# Model name
+model = "voyage-code-3"
+# Batch size for embedding requests
+batch_size = 32
+# Embedding dimensions (auto-detected per model)
+dimensions = 1024
+
+[vector]
+# Vector store backend: "flat" (default) | "lancedb-native" (requires --features lancedb)
+backend = "flat"
+# Database path
+db_path = "vectors"
+
+[query]
+# Default max results per tool call
+default_max_results = 20
+# Hybrid search weights (Phase 3+)
+fff_weight = 0.3
+vector_weight = 0.5
+graph_weight = 0.2
+# Token budget for smart context responses
+max_context_tokens = 8000
+
+[mcp]
+# Server name exposed to MCP clients
+server_name = "fva"
+# Log level: trace, debug, info, warn, error
+log_level = "info"
+# Log file path (empty = stderr only)
+log_file = ""
+
+[security]
+# Sandbox: only index within project root
+sandbox_indexing = true
+# Disable all telemetry (always true, not configurable at runtime)
+no_telemetry = true
