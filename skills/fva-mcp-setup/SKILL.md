@@ -49,18 +49,18 @@ Connect the `fva` binary to AI agent MCP clients via stdio transport.
 
 Ready-to-copy examples live in `examples/mcp-clients/`. See `manifest.json` for paths.
 
-| Agent | Example file | Install location |
-| --- | --- | --- |
-| Cursor (project) | `cursor.project.mcp.json` | `<project>/.cursor/mcp.json` |
-| Cursor (global) | `cursor.global.mcp.json` | `~/.cursor/mcp.json` |
-| Claude Code | `claude-code.project.mcp.json` | `<project>/.mcp.json` |
-| Claude Desktop | `claude-desktop.*.json` | OS-specific — see manifest |
-| VS Code / Copilot | `vscode.workspace.mcp.json` | `<project>/.vscode/mcp.json` |
-| Windsurf | `windsurf.mcp_config.json` | `~/.codeium/windsurf/mcp_config.json` |
-| Zed | `zed.context_servers.json` | Merge into Zed `settings.json` |
-| Continue | `continue.fva.yaml` | `<project>/.continue/mcpServers/` |
-| Gemini CLI | `gemini-cli.settings.json` | `~/.gemini/settings.json` |
-| Cline / Roo Code | `cline.mcp_settings.json` | Extension MCP settings |
+| Agent             | Example file                   | Install location                      |
+| ----------------- | ------------------------------ | ------------------------------------- |
+| Cursor (project)  | `cursor.project.mcp.json`      | `<project>/.cursor/mcp.json`          |
+| Cursor (global)   | `cursor.global.mcp.json`       | `~/.cursor/mcp.json`                  |
+| Claude Code       | `claude-code.project.mcp.json` | `<project>/.mcp.json`                 |
+| Claude Desktop    | `claude-desktop.*.json`        | OS-specific — see manifest            |
+| VS Code / Copilot | `vscode.workspace.mcp.json`    | `<project>/.vscode/mcp.json`          |
+| Windsurf          | `windsurf.mcp_config.json`     | `~/.codeium/windsurf/mcp_config.json` |
+| Zed               | `zed.context_servers.json`     | Merge into Zed `settings.json`        |
+| Continue          | `continue.fva.yaml`            | `<project>/.continue/mcpServers/`     |
+| Gemini CLI        | `gemini-cli.settings.json`     | `~/.gemini/settings.json`             |
+| Cline / Roo Code  | `cline.mcp_settings.json`      | Extension MCP settings                |
 
 ### Claude Code CLI shortcut
 
@@ -96,13 +96,13 @@ Copy from `examples/mcp-clients/cursor.project.mcp.json`.
 
 ## Troubleshooting
 
-| Symptom | Fix |
-| --- | --- |
-| Tool not found | Check `command` path; verify `fva --version` in same shell |
-| Empty search results | Run `fva index --path .` then retry |
-| Stale results | Re-index or enable `watch = true` in config |
-| Voyage errors | Set `VOYAGE_API_KEY` or switch `provider = "local"` |
-| Permission denied (Unix) | `chmod +x` on binary; ensure PATH includes install dir |
+| Symptom                  | Fix                                                        |
+| ------------------------ | ---------------------------------------------------------- |
+| Tool not found           | Check `command` path; verify `fva --version` in same shell |
+| Empty search results     | Run `fva index --path .` then retry                        |
+| Stale results            | Re-index or enable `watch = true` in config                |
+| Voyage errors            | Set `VOYAGE_API_KEY` or switch `provider = "local"`        |
+| Permission denied (Unix) | `chmod +x` on binary; ensure PATH includes install dir     |
 
 ## Optional: Voyage Embeddings
 

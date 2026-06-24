@@ -56,16 +56,16 @@ FVA stores indexes in `.fva/` (frecency, history, vectors, call graph). Run `ind
 
 ### Tool Selection Guide
 
-| Task | Tool |
-| --- | --- |
-| "Where is X handled?" | `hybrid_search` |
-| "Understand before changing" | `get_smart_context` |
-| Concept / pattern search | `semantic_search` |
-| Exact symbol body | `get_symbol_info` |
-| File structure / chunks | `get_chunks` with `path` |
-| Who calls this function? | `get_call_graph` |
-| Exact identifier in text | `grep` |
-| Find file by partial path | `find_files` |
+| Task                         | Tool                     |
+| ---------------------------- | ------------------------ |
+| "Where is X handled?"        | `hybrid_search`          |
+| "Understand before changing" | `get_smart_context`      |
+| Concept / pattern search     | `semantic_search`        |
+| Exact symbol body            | `get_symbol_info`        |
+| File structure / chunks      | `get_chunks` with `path` |
+| Who calls this function?     | `get_call_graph`         |
+| Exact identifier in text     | `grep`                   |
+| Find file by partial path    | `find_files`             |
 
 ### Pagination
 

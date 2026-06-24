@@ -135,7 +135,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<FindFilesParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
+        let (limit, offset) =
+            resolve_pagination(params.max_results, params.offset, self.default_max_results);
 
         let result = self
             .engine
@@ -176,7 +177,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GrepParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
+        let (limit, offset) =
+            resolve_pagination(params.max_results, params.offset, self.default_max_results);
 
         let result = self
             .engine
@@ -214,7 +216,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetChunksParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
+        let (limit, offset) =
+            resolve_pagination(params.max_results, params.offset, self.default_max_results);
         let include_content = params.include_content.unwrap_or(true);
         let store = self.engine.indexer.store();
 
@@ -254,7 +257,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetSymbolInfoParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
+        let (limit, _offset) =
+            resolve_pagination(params.max_results, None, self.default_max_results);
         let chunks = self.engine.indexer.store().find_symbol(&params.symbol);
 
         if chunks.is_empty() {
@@ -278,11 +282,9 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<SemanticSearchParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
-        let result = self
-            .engine
-            .query
-            .semantic_search(&params.query, limit);
+        let (limit, _offset) =
+            resolve_pagination(params.max_results, None, self.default_max_results);
+        let result = self.engine.query.semantic_search(&params.query, limit);
         Ok(CallToolResult::success(vec![Content::text(
             format_hybrid_result(&result),
         )]))
@@ -296,7 +298,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<HybridSearchParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
+        let (limit, _offset) =
+            resolve_pagination(params.max_results, None, self.default_max_results);
         let mut result = self.engine.query.hybrid_search(&params.query, limit);
 
         if let Some(path) = &params.path {
@@ -361,7 +364,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetSmartContextParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
+        let (limit, _offset) =
+            resolve_pagination(params.max_results, None, self.default_max_results);
         let search = self.engine.query.hybrid_search(&params.query, limit);
         let ctx = self
             .engine

@@ -61,7 +61,12 @@ impl ContextBuilder {
             used_tokens += tokens;
         }
 
-        self.try_add_section(&mut sections, &mut used_tokens, "Primary matches".into(), primary);
+        self.try_add_section(
+            &mut sections,
+            &mut used_tokens,
+            "Primary matches".into(),
+            primary,
+        );
 
         // Graph context for top hit
         if let Some(top) = search_result.hits.first() {
@@ -93,7 +98,12 @@ impl ContextBuilder {
                     graph_text.push('\n');
                 }
 
-                self.try_add_section(&mut sections, &mut used_tokens, "Call graph".into(), graph_text);
+                self.try_add_section(
+                    &mut sections,
+                    &mut used_tokens,
+                    "Call graph".into(),
+                    graph_text,
+                );
             }
         }
 
@@ -113,7 +123,12 @@ impl ContextBuilder {
                         chunk.content
                     ));
                 }
-                self.try_add_section(&mut sections, &mut used_tokens, format!("File context: {path}"), text);
+                self.try_add_section(
+                    &mut sections,
+                    &mut used_tokens,
+                    format!("File context: {path}"),
+                    text,
+                );
             }
         }
 

@@ -32,7 +32,9 @@ pub struct ProjectConfig {
 
 impl Default for ProjectConfig {
     fn default() -> Self {
-        Self { root: default_root() }
+        Self {
+            root: default_root(),
+        }
     }
 }
 
@@ -212,32 +214,76 @@ impl Default for Config {
     }
 }
 
-fn default_root() -> String { ".".to_string() }
-fn default_true() -> bool { true }
-fn default_debounce() -> u64 { 300 }
-fn default_max_file_size() -> u64 { 10 * 1024 * 1024 }
-fn default_frecency_db() -> String { ".fva/frecency".to_string() }
-fn default_history_db() -> String { ".fva/history".to_string() }
-fn default_max_cached_files() -> usize { 30_000 }
-fn default_embedding_provider() -> String { "local".to_string() }
-fn default_embedding_model() -> String { "voyage-code-3".to_string() }
-fn default_batch_size() -> usize { 32 }
-fn default_dimensions() -> usize { 1024 }
-fn default_vector_backend() -> String { "flat".to_string() }
-fn default_vector_db() -> String { "vectors".to_string() }
-fn default_max_results() -> usize { 20 }
-fn default_fff_weight() -> f32 { 0.3 }
-fn default_vector_weight() -> f32 { 0.5 }
-fn default_graph_weight() -> f32 { 0.2 }
-fn default_max_context_tokens() -> usize { 8000 }
-fn default_server_name() -> String { "fva".to_string() }
-fn default_log_level() -> String { "info".to_string() }
+fn default_root() -> String {
+    ".".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_debounce() -> u64 {
+    300
+}
+fn default_max_file_size() -> u64 {
+    10 * 1024 * 1024
+}
+fn default_frecency_db() -> String {
+    ".fva/frecency".to_string()
+}
+fn default_history_db() -> String {
+    ".fva/history".to_string()
+}
+fn default_max_cached_files() -> usize {
+    30_000
+}
+fn default_embedding_provider() -> String {
+    "local".to_string()
+}
+fn default_embedding_model() -> String {
+    "voyage-code-3".to_string()
+}
+fn default_batch_size() -> usize {
+    32
+}
+fn default_dimensions() -> usize {
+    1024
+}
+fn default_vector_backend() -> String {
+    "flat".to_string()
+}
+fn default_vector_db() -> String {
+    "vectors".to_string()
+}
+fn default_max_results() -> usize {
+    20
+}
+fn default_fff_weight() -> f32 {
+    0.3
+}
+fn default_vector_weight() -> f32 {
+    0.5
+}
+fn default_graph_weight() -> f32 {
+    0.2
+}
+fn default_max_context_tokens() -> usize {
+    8000
+}
+fn default_server_name() -> String {
+    "fva".to_string()
+}
+fn default_log_level() -> String {
+    "info".to_string()
+}
 
 impl Config {
     /// Load config with layered precedence (low → high):
     /// defaults → `~/.config/fva/config.toml` → project `fva.toml` / `.fva.toml` → `--config`.
     pub fn load(explicit: Option<&Path>, cli_root: Option<&str>) -> Result<Self> {
-        Self::load_layered(Some(Self::global_config_path().as_path()), cli_root, explicit)
+        Self::load_layered(
+            Some(Self::global_config_path().as_path()),
+            cli_root,
+            explicit,
+        )
     }
 
     fn load_layered(
