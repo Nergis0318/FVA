@@ -10,3 +10,6 @@ email = "me@nergis.dev"
 
 [registries.crates-io]
 protocol = "sparse"
+
+[build]
+rustc-wrapper = "sccache"

@@ -31,11 +31,11 @@ jobs:
             target: aarch64-unknown-linux-musl
             artifact_name: fva-linux-arm64
             archive_ext: tar.gz
-          - os: windows-latest #blacksmith-32vcpu-windows-2025
+          - os: blacksmith-32vcpu-ubuntu-2404
             target: x86_64-pc-windows-msvc
             artifact_name: fva-windows-amd64
             archive_ext: zip
-          # - os: windows-11-arm
+          # - os: blacksmith-32vcpu-ubuntu-2404-arm
           #   target: aarch64-pc-windows-msvc
           #   artifact_name: fva-windows-arm64
           #   archive_ext: zip
@@ -65,13 +65,13 @@ jobs:
         if: contains(matrix.target, 'linux-musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Install protobuf-compiler
-        if: contains(matrix.target, 'linux-musl')
+      - name: Install protobuf-compiler (Linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
-      - name: Install protobuf-compiler (windows)
+      - name: Install cargo-xwin
         if: contains(matrix.target, 'windows-msvc')
-        run: winget install protobuf --accept-source-agreements --accept-package-agreements
+        run: cargo binstall cargo-xwin --locked
 
       - name: Install protobuf-compiler (macos)
         if: contains(matrix.target, 'apple-darwin')
@@ -86,7 +86,14 @@ jobs:
             ${{ runner.os }}-sccache-${{ matrix.target }}-
 
       - name: Build
+        if: ${{ !contains(matrix.target, 'windows-msvc') }}
         run: cargo build --release --all-features --target ${{ matrix.target }}
+        env:
+          SCCACHE_DIR: ${{ runner.temp }}/sccache
+
+      - name: Build (Windows cross)
+        if: contains(matrix.target, 'windows-msvc')
+        run: cargo xwin build --release --all-features --target ${{ matrix.target }}
         env:
           SCCACHE_DIR: ${{ runner.temp }}/sccache
 
@@ -96,20 +103,19 @@ jobs:
         env:
           SCCACHE_DIR: ${{ runner.temp }}/sccache
 
-      - name: Package (Unix)
-        if: runner.os != 'Windows'
+      - name: Package (tar.gz)
+        if: matrix.archive_ext == 'tar.gz'
         run: |
           mkdir -p dist
           tar czf "dist/${{ matrix.artifact_name }}.${{ matrix.archive_ext }}" \
             -C "target/${{ matrix.target }}/release" fva
 
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Package (zip)
+        if: matrix.archive_ext == 'zip'
         run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $bin = "target\${{ matrix.target }}\release\fva.exe"
-          Compress-Archive -Path $bin -DestinationPath "dist\${{ matrix.artifact_name }}.${{ matrix.archive_ext }}" -Force
+          mkdir -p dist
+          zip -j "dist/${{ matrix.artifact_name }}.${{ matrix.archive_ext }}" \
+            "target/${{ matrix.target }}/release/fva.exe"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
