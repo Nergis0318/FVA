@@ -1,6 +1,6 @@
 [package]
 name = "fva"
-version = "0.0.8-alpha.1"
+version = "1.0.0-beta"
 edition = "2024"
 description = "FFF · Vector · AST — hybrid codebase intelligence engine for AI coding agents"
 license = "MIT"

@@ -157,6 +157,11 @@ impl ChunkStore {
             .collect()
     }
 
+    /// Clear content hashes so the next index pass re-processes all files (benchmark only).
+    pub fn invalidate_hashes(&self) {
+        self.file_hashes.write().clear();
+    }
+
     pub fn stats(&self) -> IndexStats {
         let files = self.chunks_by_file.read();
         let total_chunks: usize = files.values().map(|v| v.len()).sum();

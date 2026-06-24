@@ -13,7 +13,7 @@ use super::VectorStore;
 use crate::embedding::cosine_similarity;
 use crate::error::{FvaError, Result};
 use crate::indexer::chunker::CodeChunk;
-use crate::util::{HasScore, sort_by_score};
+use crate::util::HasScore;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredVector {
@@ -149,10 +149,13 @@ impl FlatVectorStore {
 
     fn preview(content: &str, max_len: usize) -> String {
         if content.len() <= max_len {
-            content.to_string()
-        } else {
-            format!("{}...", &content[..max_len])
+            return content.to_string();
         }
+        let mut end = max_len.min(content.len());
+        while end > 0 && !content.is_char_boundary(end) {
+            end -= 1;
+        }
+        format!("{}...", &content[..end])
     }
 }
 
@@ -195,15 +198,32 @@ impl VectorStore for FlatVectorStore {
 
     fn remove_file(&self, relative_path: &str) -> Result<()> {
         let mut entries = self.entries.write();
-        entries.retain(|e| e.relative_path != relative_path);
-
         let mut by_file = self.by_file.write();
-        by_file.clear();
-        for (idx, entry) in entries.iter().enumerate() {
-            by_file
-                .entry(entry.relative_path.clone())
-                .or_default()
-                .push(idx);
+
+        // O(1) lookup: if the file isn't tracked, nothing to do
+        let Some(mut indices) = by_file.remove(relative_path) else {
+            return Ok(());
+        };
+
+        // Remove entries in reverse index order so earlier removals don't
+        // shift indices we haven't processed yet. Use swap_remove (O(1))
+        // instead of retain (O(n)), fixing up by_file for any moved entry.
+        indices.sort_unstable();
+        for &idx in indices.iter().rev() {
+            let last = entries.len() - 1;
+            if idx == last {
+                entries.pop();
+            } else {
+                entries.swap_remove(idx);
+                // The entry that was at `last` is now at `idx` — update its
+                // by_file index so future lookups are correct.
+                let moved_path = entries[idx].relative_path.clone();
+                if let Some(moved_indices) = by_file.get_mut(&moved_path) {
+                    if let Some(pos) = moved_indices.iter().position(|i| *i == last) {
+                        moved_indices[pos] = idx;
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -211,17 +231,47 @@ impl VectorStore for FlatVectorStore {
 
     fn search(&self, query_vector: &[f32], limit: usize) -> Result<Vec<VectorHit>> {
         let entries = self.entries.read();
-        let mut hits: Vec<VectorHit> = entries
-            .iter()
-            .map(|e| {
-                let mut hit = VectorHit::from(e);
-                hit.score = cosine_similarity(query_vector, &e.vector);
-                hit
-            })
-            .collect();
+        if entries.is_empty() {
+            return Ok(Vec::new());
+        }
 
-        sort_by_score(&mut hits);
-        hits.truncate(limit);
+        // Compute scores only → find top-k indices → materialise only those hits.
+        // This avoids allocating full VectorHit objects (with string clones) for
+        // every entry when only a fraction are returned.
+        let n = entries.len();
+        let mut scored: Vec<(f32, usize)> = Vec::with_capacity(n);
+        for (i, e) in entries.iter().enumerate() {
+            scored.push((cosine_similarity(query_vector, &e.vector), i));
+        }
+
+        // Partial select: pivot at n-k so positions n-k..n hold the top-k scores
+        let k = limit.min(n);
+        scored.select_nth_unstable_by(n - k, |a, b| {
+            a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Sort only the top-k portion descending by score
+        scored[n - k..].sort_unstable_by(|a, b| {
+            b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        // Materialise only top-k VectorHit objects (avoids N string clones)
+        let mut hits: Vec<VectorHit> = Vec::with_capacity(k);
+        for &(score, idx) in &scored[n - k..] {
+            let e = &entries[idx];
+            hits.push(VectorHit {
+                chunk_id: e.chunk_id.clone(),
+                relative_path: e.relative_path.clone(),
+                symbol_name: e.symbol_name.clone(),
+                symbol_kind: e.symbol_kind.clone(),
+                language: e.language.clone(),
+                start_line: e.start_line,
+                end_line: e.end_line,
+                content_preview: e.content_preview.clone(),
+                score,
+            });
+        }
+
         Ok(hits)
     }
 

@@ -2269,7 +2269,7 @@ dependencies = [
 
 [[package]]
 name = "fva"
-version = "0.0.8-alpha.1"
+version = "1.0.0-beta"
 dependencies = [
  "ahash",
  "anyhow",

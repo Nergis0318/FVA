@@ -1,3 +1,4 @@
+pub mod bench;
 pub mod config;
 pub mod embedding;
 pub mod engine;

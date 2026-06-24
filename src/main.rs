@@ -51,6 +51,21 @@ enum Commands {
         #[arg(short, long, default_value_t = 10)]
         limit: usize,
     },
+    /// Run performance benchmarks (Phase 5).
+    Bench {
+        /// Benchmark iterations per operation.
+        #[arg(short, long, default_value_t = 5)]
+        iterations: usize,
+        /// Warmup iterations (discarded).
+        #[arg(short, long, default_value_t = 2)]
+        warmup: usize,
+        /// Write JSON report to path (default: .fva/benchmarks/latest.json).
+        #[arg(long, value_name = "PATH")]
+        output: Option<PathBuf>,
+        /// Output JSON to stdout instead of table.
+        #[arg(long)]
+        json: bool,
+    },
     /// Print version info.
     Version,
     /// Upgrade FVA to the latest release.
@@ -158,6 +173,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "embedder": engine.embedder.name(),
             });
             println!("{}", serde_json::to_string_pretty(&status)?);
+            engine.shutdown();
+        }
+
+        Commands::Bench {
+            iterations,
+            warmup,
+            output,
+            json,
+        } => {
+            let _ = engine.fff.wait_for_scan(Duration::from_secs(120));
+            if engine.indexer.stats().indexed_files == 0 {
+                let _ = engine.indexer.index_all();
+            }
+            let opts = fva::bench::BenchOptions {
+                iterations,
+                warmup,
+                queries: vec![
+                    "hybrid_search".into(),
+                    "Indexer".into(),
+                    "embedding".into(),
+                    "config".into(),
+                ],
+                output: output.or_else(|| {
+                    Some(engine.config.resolve_data_dir(&engine.root).join("benchmarks"))
+                }),
+                json,
+            };
+            let report = fva::bench::run(&engine, &opts);
+            fva::bench::emit(&report, &opts);
             engine.shutdown();
         }
 

@@ -1,0 +1,128 @@
+//! Benchmark report types and statistics.
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TargetStatus {
+    Pass,
+    Fail,
+    Warn,
+    NoTarget,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchResult {
+    pub name: String,
+    pub iterations: usize,
+    pub min_ms: f64,
+    pub max_ms: f64,
+    pub mean_ms: f64,
+    pub p50_ms: f64,
+    pub p95_ms: f64,
+    pub target_ms: Option<f64>,
+    pub status: TargetStatus,
+    pub note: Option<String>,
+}
+
+impl BenchResult {
+    pub fn from_samples(name: &str, samples: &[f64], target_ms: Option<f64>) -> Self {
+        let mut sorted = samples.to_vec();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let n = sorted.len().max(1);
+        let min_ms = sorted.first().copied().unwrap_or(0.0);
+        let max_ms = sorted.last().copied().unwrap_or(0.0);
+        let mean_ms = sorted.iter().sum::<f64>() / n as f64;
+        let p50_ms = percentile(&sorted, 0.50);
+        let p95_ms = percentile(&sorted, 0.95);
+
+        let status = match target_ms {
+            None => TargetStatus::NoTarget,
+            Some(t) if p95_ms <= t => TargetStatus::Pass,
+            Some(t) if p50_ms <= t => TargetStatus::Warn,
+            Some(_) => TargetStatus::Fail,
+        };
+
+        Self {
+            name: name.to_string(),
+            iterations: samples.len(),
+            min_ms,
+            max_ms,
+            mean_ms,
+            p50_ms,
+            p95_ms,
+            target_ms,
+            status,
+            note: None,
+        }
+    }
+}
+
+fn percentile(sorted: &[f64], p: f64) -> f64 {
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    let idx = ((sorted.len() as f64 - 1.0) * p).round() as usize;
+    sorted[idx.min(sorted.len() - 1)]
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchReport {
+    pub version: String,
+    pub timestamp: String,
+    pub repo: String,
+    pub corpus: Option<super::CorpusStats>,
+    pub results: Vec<BenchResult>,
+    pub duration_total_ms: f64,
+}
+
+pub struct BenchSuite {
+    report: BenchReport,
+}
+
+impl BenchSuite {
+    pub fn new(repo: String) -> Self {
+        Self {
+            report: BenchReport {
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                timestamp: chrono_like_timestamp(),
+                repo,
+                corpus: None,
+                results: Vec::new(),
+                duration_total_ms: 0.0,
+            },
+        }
+    }
+
+    pub fn set_corpus(&mut self, corpus: super::CorpusStats) {
+        self.report.corpus = Some(corpus);
+    }
+
+    pub fn add(&mut self, result: BenchResult) {
+        self.report.results.push(result);
+    }
+
+    pub fn set_duration(&mut self, ms: f64) {
+        self.report.duration_total_ms = ms;
+    }
+
+    pub fn finish(self) -> BenchReport {
+        self.report
+    }
+}
+
+impl From<BenchSuite> for BenchReport {
+    fn from(s: BenchSuite) -> Self {
+        s.report
+    }
+}
+
+fn chrono_like_timestamp() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    format!("{secs}")
+}
