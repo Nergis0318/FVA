@@ -13,6 +13,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: sccache
 
 jobs:
   build:
@@ -30,7 +31,7 @@ jobs:
             target: aarch64-unknown-linux-musl
             artifact_name: fva-linux-arm64
             archive_ext: tar.gz
-          - os: blacksmith-32vcpu-windows-2025
+          - os: windows-latest #blacksmith-32vcpu-windows-2025
             target: x86_64-pc-windows-msvc
             artifact_name: fva-windows-amd64
             archive_ext: zip
@@ -54,15 +55,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Cache cargo dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
 
-      - name: Install winget
-        if: contains(matrix.target, 'windows-msvc')
-        uses: Cyberboss/install-winget@v1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          wget_release_id: latest
+      - name: Install sccache
+        run: cargo binstall sccache
 
       - name: Install musl toolchain
         if: contains(matrix.target, 'linux-musl')
@@ -80,8 +77,24 @@ jobs:
         if: contains(matrix.target, 'apple-darwin')
         run: brew install protobuf
 
+      - name: Cache sccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/sccache
+          key: ${{ runner.os }}-sccache-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ matrix.target }}-
+
       - name: Build
         run: cargo build --release --all-features --target ${{ matrix.target }}
+        env:
+          SCCACHE_DIR: ${{ runner.temp }}/sccache
+
+      - name: sccache stats
+        if: always()
+        run: sccache --show-stats
+        env:
+          SCCACHE_DIR: ${{ runner.temp }}/sccache
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
