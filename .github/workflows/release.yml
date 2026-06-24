@@ -61,8 +61,20 @@ jobs:
         if: contains(matrix.target, 'linux-musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
+      - name: Install protobuf-compiler
+        if: contains(matrix.target, 'linux-musl')
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install protobuf-compiler (windows)
+        if: contains(matrix.target, 'windows-msvc')
+        run: winget install protobuf --accept-source-agreements --accept-package-agreements
+
+      - name: Install protobuf-compiler (macos)
+        if: contains(matrix.target, 'apple-darwin')
+        run: brew install protobuf -y
+
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --all-features --target ${{ matrix.target }}
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
