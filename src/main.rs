@@ -171,10 +171,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             engine.shutdown();
         }
 
-        Commands::Version => unreachable!("version handled above"),
-
-        Commands::Upgrade { .. } => unreachable!("upgrade handled above"),
-
         Commands::Serve => {
             engine.indexer.spawn_background_index();
 
@@ -200,6 +196,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             service.waiting().await?;
             engine.shutdown();
         }
+
+        _ => unreachable!(),
     }
 
     Ok(())

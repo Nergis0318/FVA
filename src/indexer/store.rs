@@ -19,6 +19,17 @@ pub struct FileIndexMeta {
     pub indexed_at: u64,
 }
 
+fn remove_symbols_from_index(sym_index: &mut HashMap<String, Vec<String>>, chunks: &[CodeChunk]) {
+    for chunk in chunks {
+        if let Some(ids) = sym_index.get_mut(&chunk.symbol_name.to_lowercase()) {
+            ids.retain(|id| id != &chunk.id);
+            if ids.is_empty() {
+                sym_index.remove(&chunk.symbol_name.to_lowercase());
+            }
+        }
+    }
+}
+
 /// Thread-safe chunk store (Phase 1: in-memory; Phase 2+: persist to LanceDB).
 #[derive(Default)]
 pub struct ChunkStore {
@@ -39,14 +50,7 @@ impl ChunkStore {
         // Remove old symbol index entries for this file
         if let Some(old_chunks) = self.chunks_by_file.read().get(relative_path) {
             let mut sym_index = self.chunks_by_symbol.write();
-            for chunk in old_chunks {
-                if let Some(ids) = sym_index.get_mut(&chunk.symbol_name.to_lowercase()) {
-                    ids.retain(|id| id != &chunk.id);
-                    if ids.is_empty() {
-                        sym_index.remove(&chunk.symbol_name.to_lowercase());
-                    }
-                }
-            }
+            remove_symbols_from_index(&mut sym_index, old_chunks);
         }
 
         // Update symbol index
@@ -90,14 +94,7 @@ impl ChunkStore {
     pub fn remove_file(&self, relative_path: &str) {
         if let Some(chunks) = self.chunks_by_file.write().remove(relative_path) {
             let mut sym_index = self.chunks_by_symbol.write();
-            for chunk in &chunks {
-                if let Some(ids) = sym_index.get_mut(&chunk.symbol_name.to_lowercase()) {
-                    ids.retain(|id| id != &chunk.id);
-                    if ids.is_empty() {
-                        sym_index.remove(&chunk.symbol_name.to_lowercase());
-                    }
-                }
-            }
+            remove_symbols_from_index(&mut sym_index, &chunks);
         }
         self.file_hashes.write().remove(relative_path);
         self.file_meta.write().remove(relative_path);

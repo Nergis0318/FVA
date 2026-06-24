@@ -13,6 +13,7 @@ use super::VectorStore;
 use crate::embedding::cosine_similarity;
 use crate::error::{FvaError, Result};
 use crate::indexer::chunker::CodeChunk;
+use crate::util::{HasScore, sort_by_score};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredVector {
@@ -25,6 +26,22 @@ struct StoredVector {
     end_line: usize,
     content_preview: String,
     vector: Vec<f32>,
+}
+
+impl StoredVector {
+    fn from_chunk(chunk: &CodeChunk, vector: Vec<f32>) -> Self {
+        Self {
+            chunk_id: chunk.id.clone(),
+            relative_path: chunk.relative_path.clone(),
+            symbol_name: chunk.symbol_name.clone(),
+            symbol_kind: chunk.symbol_kind.clone(),
+            language: chunk.language.clone(),
+            start_line: chunk.start_line,
+            end_line: chunk.end_line,
+            content_preview: FlatVectorStore::preview(&chunk.content, 200),
+            vector,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -45,6 +62,28 @@ pub struct VectorHit {
     pub end_line: usize,
     pub content_preview: String,
     pub score: f32,
+}
+
+impl From<&StoredVector> for VectorHit {
+    fn from(s: &StoredVector) -> Self {
+        Self {
+            chunk_id: s.chunk_id.clone(),
+            relative_path: s.relative_path.clone(),
+            symbol_name: s.symbol_name.clone(),
+            symbol_kind: s.symbol_kind.clone(),
+            language: s.language.clone(),
+            start_line: s.start_line,
+            end_line: s.end_line,
+            content_preview: s.content_preview.clone(),
+            score: 0.0,
+        }
+    }
+}
+
+impl HasScore for VectorHit {
+    fn score(&self) -> f32 {
+        self.score
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -144,17 +183,7 @@ impl VectorStore for FlatVectorStore {
             }
 
             let idx = entries.len();
-            entries.push(StoredVector {
-                chunk_id: chunk.id.clone(),
-                relative_path: chunk.relative_path.clone(),
-                symbol_name: chunk.symbol_name.clone(),
-                symbol_kind: chunk.symbol_kind.clone(),
-                language: chunk.language.clone(),
-                start_line: chunk.start_line,
-                end_line: chunk.end_line,
-                content_preview: Self::preview(&chunk.content, 200),
-                vector: vector.clone(),
-            });
+            entries.push(StoredVector::from_chunk(chunk, vector.clone()));
             by_file
                 .entry(chunk.relative_path.clone())
                 .or_default()
@@ -184,24 +213,14 @@ impl VectorStore for FlatVectorStore {
         let entries = self.entries.read();
         let mut hits: Vec<VectorHit> = entries
             .iter()
-            .map(|e| VectorHit {
-                chunk_id: e.chunk_id.clone(),
-                relative_path: e.relative_path.clone(),
-                symbol_name: e.symbol_name.clone(),
-                symbol_kind: e.symbol_kind.clone(),
-                language: e.language.clone(),
-                start_line: e.start_line,
-                end_line: e.end_line,
-                content_preview: e.content_preview.clone(),
-                score: cosine_similarity(query_vector, &e.vector),
+            .map(|e| {
+                let mut hit = VectorHit::from(e);
+                hit.score = cosine_similarity(query_vector, &e.vector);
+                hit
             })
             .collect();
 
-        hits.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        sort_by_score(&mut hits);
         hits.truncate(limit);
         Ok(hits)
     }

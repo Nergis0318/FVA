@@ -8,6 +8,7 @@ pub mod indexer;
 pub mod mcp;
 pub mod query;
 pub mod upgrade;
+pub mod util;
 pub mod vector;
 
 pub use config::Config;

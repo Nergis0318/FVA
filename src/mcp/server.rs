@@ -10,6 +10,7 @@ use serde::Deserialize;
 use crate::engine::FvaEngine;
 use crate::indexer::chunker::{ChunkSearchResult, format_chunks_for_agent};
 use crate::query::context::ContextBuilder;
+use crate::util::resolve_pagination;
 
 pub const MCP_INSTRUCTIONS: &str = concat!(
     "FVA (FFF · Vector · AST) is a hybrid codebase intelligence engine.\n",
@@ -32,12 +33,8 @@ pub const MCP_INSTRUCTIONS: &str = concat!(
     "- AST chunks preserve syntactic integrity — use instead of raw file reads.\n",
 );
 
-fn normalize_max_results(raw: Option<f64>, default: usize) -> usize {
-    match raw {
-        None => default,
-        Some(v) if v <= 0.0 || !v.is_finite() => default,
-        Some(v) => (v.round() as usize).max(1),
-    }
+fn empty_result(msg: String) -> CallToolResult {
+    CallToolResult::success(vec![Content::text(msg)])
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -138,25 +135,24 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<FindFilesParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let offset = params.offset.map(|v| v.max(0.0) as usize).unwrap_or(0);
+        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
 
         let result = self
             .engine
             .fff
-            .find_files(&params.query, offset, max_results)
+            .find_files(&params.query, offset, limit)
             .map_err(|e| ErrorData::internal_error(format!("find_files failed: {e}"), None))?;
 
         if result.paths.is_empty() {
-            return Ok(CallToolResult::success(vec![Content::text(format!(
+            return Ok(empty_result(format!(
                 "0 results ({} files indexed by FFF)",
                 self.engine.fff.total_files()
-            ))]));
+            )));
         }
 
         let mut lines = vec![format!(
             "{}/{} matches",
-            result.paths.len().min(max_results),
+            result.paths.len().min(limit),
             result.total_matched
         )];
         for path in &result.paths {
@@ -180,24 +176,21 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GrepParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let offset = params.offset.map(|v| v.max(0.0) as usize).unwrap_or(0);
+        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
 
         let result = self
             .engine
             .fff
-            .grep(&params.query, offset, max_results)
+            .grep(&params.query, offset, limit)
             .map_err(|e| ErrorData::internal_error(format!("grep failed: {e}"), None))?;
 
         if result.matches.is_empty() {
-            return Ok(CallToolResult::success(vec![Content::text(
-                "0 matches.".to_string(),
-            )]));
+            return Ok(empty_result("0 matches.".to_string()));
         }
 
         let mut lines = vec![format!("{} matches", result.matches.len())];
         let mut current_file = String::new();
-        for m in result.matches.iter().take(max_results) {
+        for m in result.matches.iter().take(limit) {
             if m.file != current_file {
                 current_file = m.file.clone();
                 lines.push(format!("\n{}:", m.file));
@@ -221,8 +214,7 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetChunksParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let offset = params.offset.map(|v| v.max(0.0) as usize).unwrap_or(0);
+        let (limit, offset) = resolve_pagination(params.max_results, params.offset, self.default_max_results);
         let include_content = params.include_content.unwrap_or(true);
         let store = self.engine.indexer.store();
 
@@ -236,12 +228,12 @@ impl FvaServer {
             )]));
         };
 
-        let result = ChunkSearchResult::paginate(chunks, offset, max_results);
+        let result = ChunkSearchResult::paginate(chunks, offset, limit);
         if result.chunks.is_empty() {
-            return Ok(CallToolResult::success(vec![Content::text(format!(
+            return Ok(empty_result(format!(
                 "0 chunks found. Stats: {:?}",
                 store.stats()
-            ))]));
+            )));
         }
 
         let mut text = format_chunks_for_agent(&result.chunks, include_content);
@@ -262,17 +254,17 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetSymbolInfoParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
+        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
         let chunks = self.engine.indexer.store().find_symbol(&params.symbol);
 
         if chunks.is_empty() {
-            return Ok(CallToolResult::success(vec![Content::text(format!(
+            return Ok(empty_result(format!(
                 "Symbol '{}' not found.",
                 params.symbol
-            ))]));
+            )));
         }
 
-        let result = ChunkSearchResult::paginate(chunks, 0, max_results);
+        let result = ChunkSearchResult::paginate(chunks, 0, limit);
         Ok(CallToolResult::success(vec![Content::text(
             format_chunks_for_agent(&result.chunks, true),
         )]))
@@ -286,11 +278,11 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<SemanticSearchParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
+        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
         let result = self
             .engine
             .query
-            .semantic_search(&params.query, max_results);
+            .semantic_search(&params.query, limit);
         Ok(CallToolResult::success(vec![Content::text(
             format_hybrid_result(&result),
         )]))
@@ -304,8 +296,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<HybridSearchParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let mut result = self.engine.query.hybrid_search(&params.query, max_results);
+        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
+        let mut result = self.engine.query.hybrid_search(&params.query, limit);
 
         if let Some(path) = &params.path {
             result.hits.retain(|h| h.relative_path.contains(path));
@@ -369,8 +361,8 @@ impl FvaServer {
         &self,
         Parameters(params): Parameters<GetSmartContextParams>,
     ) -> Result<CallToolResult, ErrorData> {
-        let max_results = normalize_max_results(params.max_results, self.default_max_results);
-        let search = self.engine.query.hybrid_search(&params.query, max_results);
+        let (limit, _offset) = resolve_pagination(params.max_results, None, self.default_max_results);
+        let search = self.engine.query.hybrid_search(&params.query, limit);
         let ctx = self
             .engine
             .context

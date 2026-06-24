@@ -62,6 +62,20 @@ pub enum GraphDelta {
     RemoveFile(String),
 }
 
+fn remove_node_inner(
+    graph: &mut DiGraph<SymbolId, String>,
+    node_index: &mut HashMap<SymbolId, NodeIndex>,
+    callee_index: &mut HashMap<String, Vec<NodeIndex>>,
+    symbol: &SymbolId,
+) {
+    if let Some(idx) = node_index.remove(symbol) {
+        let _ = graph.remove_node(idx);
+    }
+    if let Some(indices) = callee_index.get_mut(&symbol.name.to_lowercase()) {
+        indices.retain(|&i| node_index.values().any(|&v| v == i));
+    }
+}
+
 /// Thread-safe call graph store.
 pub struct CallGraphStore {
     path: PathBuf,
@@ -227,13 +241,8 @@ impl CallGraphStore {
             self.record_delta(GraphDelta::RemoveNode(symbol.clone()))?;
         }
 
-        for symbol in to_remove {
-            if let Some(idx) = node_index.remove(&symbol) {
-                let _ = graph.remove_node(idx);
-            }
-            if let Some(indices) = callee_index.get_mut(&symbol.name.to_lowercase()) {
-                indices.retain(|&i| node_index.values().any(|&v| v == i));
-            }
+        for symbol in &to_remove {
+            remove_node_inner(&mut graph, &mut node_index, &mut callee_index, symbol);
         }
 
         // Rebuild node index from remaining graph nodes
@@ -466,12 +475,7 @@ impl CallGraphStore {
                 let mut node_index = self.node_index.write();
                 let mut callee_index = self.callee_index.write();
 
-                if let Some(idx) = node_index.remove(&symbol) {
-                    let _ = graph.remove_node(idx);
-                }
-                if let Some(indices) = callee_index.get_mut(&symbol.name.to_lowercase()) {
-                    indices.retain(|&i| node_index.values().any(|&v| v == i));
-                }
+                remove_node_inner(&mut graph, &mut node_index, &mut callee_index, &symbol);
             }
             GraphDelta::AddEdge {
                 caller,
@@ -492,13 +496,8 @@ impl CallGraphStore {
                     .cloned()
                     .collect();
 
-                for symbol in to_remove {
-                    if let Some(idx) = node_index.remove(&symbol) {
-                        let _ = graph.remove_node(idx);
-                    }
-                    if let Some(indices) = callee_index.get_mut(&symbol.name.to_lowercase()) {
-                        indices.retain(|&i| node_index.values().any(|&v| v == i));
-                    }
+                for symbol in &to_remove {
+                    remove_node_inner(&mut graph, &mut node_index, &mut callee_index, symbol);
                 }
             }
         }

@@ -11,6 +11,7 @@ use crate::fff::FffEngine;
 use crate::graph::CallGraphStore;
 use crate::indexer::chunker::CodeChunk;
 use crate::indexer::store::ChunkStore;
+use crate::util::{HasScore, sort_by_score};
 use crate::vector::VectorStore;
 
 /// A fused search result with multi-signal scoring.
@@ -29,6 +30,32 @@ pub struct HybridHit {
     pub vector_score: f32,
     pub graph_score: f32,
     pub sources: Vec<String>,
+}
+
+impl HybridHit {
+    pub fn from_chunk(chunk: &CodeChunk) -> Self {
+        Self {
+            chunk_id: chunk.id.clone(),
+            relative_path: chunk.relative_path.clone(),
+            symbol_name: chunk.symbol_name.clone(),
+            symbol_kind: chunk.symbol_kind.clone(),
+            language: chunk.language.clone(),
+            start_line: chunk.start_line,
+            end_line: chunk.end_line,
+            content: chunk.content.clone(),
+            score: 0.0,
+            fff_score: 0.0,
+            vector_score: 0.0,
+            graph_score: 0.0,
+            sources: Vec::new(),
+        }
+    }
+}
+
+impl HasScore for HybridHit {
+    fn score(&self) -> f32 {
+        self.score
+    }
 }
 
 /// Hybrid search response.
@@ -149,11 +176,7 @@ impl HybridQueryEngine {
 
         let total = candidates.len();
         let mut hits: Vec<HybridHit> = candidates.into_values().collect();
-        hits.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        sort_by_score(&mut hits);
         hits.truncate(limit);
 
         HybridSearchResult {
@@ -171,21 +194,11 @@ impl HybridQueryEngine {
             if let Ok(vector_hits) = self.vectors.search(&query_vec, limit) {
                 for vh in vector_hits {
                     if let Some(chunk) = self.find_chunk(&vh.chunk_id) {
-                        hits.push(HybridHit {
-                            chunk_id: chunk.id.clone(),
-                            relative_path: chunk.relative_path.clone(),
-                            symbol_name: chunk.symbol_name.clone(),
-                            symbol_kind: chunk.symbol_kind.clone(),
-                            language: chunk.language.clone(),
-                            start_line: chunk.start_line,
-                            end_line: chunk.end_line,
-                            content: chunk.content.clone(),
-                            score: vh.score,
-                            fff_score: 0.0,
-                            vector_score: vh.score,
-                            graph_score: 0.0,
-                            sources: vec!["vector".into()],
-                        });
+                        let mut hit = HybridHit::from_chunk(&chunk);
+                        hit.score = vh.score;
+                        hit.vector_score = vh.score;
+                        hit.sources = vec!["vector".into()];
+                        hits.push(hit);
                     }
                 }
             }
@@ -216,21 +229,7 @@ impl HybridQueryEngine {
     ) {
         let entry = candidates
             .entry(chunk.id.clone())
-            .or_insert_with(|| HybridHit {
-                chunk_id: chunk.id.clone(),
-                relative_path: chunk.relative_path.clone(),
-                symbol_name: chunk.symbol_name.clone(),
-                symbol_kind: chunk.symbol_kind.clone(),
-                language: chunk.language.clone(),
-                start_line: chunk.start_line,
-                end_line: chunk.end_line,
-                content: chunk.content.clone(),
-                score: 0.0,
-                fff_score: 0.0,
-                vector_score: 0.0,
-                graph_score: 0.0,
-                sources: Vec::new(),
-            });
+            .or_insert_with(|| HybridHit::from_chunk(chunk));
 
         entry.fff_score = entry.fff_score.max(fff_score);
         entry.vector_score = entry.vector_score.max(vector_score);

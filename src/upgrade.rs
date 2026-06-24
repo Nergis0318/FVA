@@ -8,14 +8,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::error::{FvaError, Result};
+use crate::util;
 
 const REPO: &str = "Nergis0318/FVA";
 const API_LATEST: &str = "https://api.github.com/repos/Nergis0318/FVA/releases/latest";
+
 #[cfg(not(windows))]
-const INSTALL_SH: &str = "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh";
+const INSTALL_SHELL: (&str, &[&str], &str, &str) = ("sh", &["-c"], "-fsSL", "INSTALL_DIR");
 #[cfg(windows)]
-const INSTALL_PS1: &str =
-    "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1";
+const INSTALL_SHELL: (&str, &[&str], &str, &str) = (
+    "powershell",
+    &["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"],
+    "irm",
+    "FVA_INSTALL_DIR",
+);
 
 /// Run the upgrade flow.
 ///
@@ -90,10 +96,7 @@ fn current_exe() -> Result<PathBuf> {
 }
 
 fn fetch_latest_tag() -> Result<String> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent(concat!("fva/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|e| FvaError::Upgrade(format!("http client: {e}")))?;
+    let client = util::http_client(concat!("fva/", env!("CARGO_PKG_VERSION")))?;
 
     let resp = client
         .get(API_LATEST)
@@ -139,35 +142,21 @@ fn restore_backup(backup: &Path, exe: &Path) {
     }
 }
 
-#[cfg(windows)]
 fn run_install_script(version: &str, install_dir: &Path) -> Result<()> {
-    let command = format!("irm {INSTALL_PS1} | iex");
-    let status = Command::new("powershell")
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"])
-        .arg(&command)
-        .env("FVA_VERSION", version)
-        .env("FVA_INSTALL_DIR", install_dir)
-        .env("FVA_REPO", REPO)
-        .status()
-        .map_err(|e| FvaError::Upgrade(format!("failed to launch installer: {e}")))?;
-
-    if status.success() {
-        Ok(())
+    let (shell, args, fetch_cmd, dir_env) = INSTALL_SHELL;
+    let script_url = if cfg!(windows) {
+        "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1"
     } else {
-        Err(FvaError::Upgrade(format!(
-            "installer exited with status {status}"
-        )))
-    }
-}
+        "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh"
+    };
+    let pipe_cmd = if cfg!(windows) { "iex" } else { "bash" };
+    let command = format!("{fetch_cmd} {script_url} | {pipe_cmd}");
 
-#[cfg(not(windows))]
-fn run_install_script(version: &str, install_dir: &Path) -> Result<()> {
-    let command = format!("curl -fsSL {INSTALL_SH} | bash");
-    let status = Command::new("sh")
-        .arg("-c")
+    let status = Command::new(shell)
+        .args(args)
         .arg(&command)
         .env("FVA_VERSION", version)
-        .env("INSTALL_DIR", install_dir)
+        .env(dir_env, install_dir)
         .env("FVA_REPO", REPO)
         .status()
         .map_err(|e| FvaError::Upgrade(format!("failed to launch installer: {e}")))?;

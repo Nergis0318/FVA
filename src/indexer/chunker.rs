@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::parser::{AstParser, RawChunk};
 use crate::error::Result;
+use crate::util;
 
 /// A semantic code chunk with full metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +56,7 @@ impl CodeChunk {
 
     /// Rough token estimate (4 chars ≈ 1 token).
     pub fn estimated_tokens(&self) -> usize {
-        self.content.len() / 4 + 1
+        util::estimate_tokens(&self.content)
     }
 }
 

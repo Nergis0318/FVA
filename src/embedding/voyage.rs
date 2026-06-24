@@ -2,6 +2,7 @@
 
 use super::{Embedder, normalize};
 use crate::error::{FvaError, Result};
+use crate::util;
 use serde::{Deserialize, Serialize};
 
 pub struct VoyageEmbedder {
@@ -29,10 +30,7 @@ struct EmbedData {
 
 impl VoyageEmbedder {
     pub fn new(api_key: String, model: String, dimensions: usize) -> Result<Self> {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .map_err(|e| FvaError::Other(format!("http client: {e}")))?;
+        let client = util::http_client(concat!("fva/", env!("CARGO_PKG_VERSION")))?;
 
         Ok(Self {
             client,

@@ -52,6 +52,17 @@ pub struct FffEngine {
     base_path: Arc<RwLock<String>>,
 }
 
+fn with_picker<F, T>(picker: &SharedFilePicker, f: F) -> Result<T>
+where
+    F: FnOnce(&FilePicker) -> Result<T>,
+{
+    let guard = picker.read()?;
+    let p = guard
+        .as_ref()
+        .ok_or_else(|| FvaError::Fff(fff_search::Error::FilePickerMissing))?;
+    f(p)
+}
+
 impl FffEngine {
     pub fn new(base_path: impl AsRef<Path>, config: &FffConfig) -> Result<Self> {
         let base_path = discover_git_root(base_path.as_ref())?;
@@ -141,91 +152,85 @@ impl FffEngine {
     }
 
     pub fn find_files(&self, query: &str, offset: usize, limit: usize) -> Result<FindFilesOutput> {
-        let guard = self.picker.read()?;
-        let picker = guard
-            .as_ref()
-            .ok_or_else(|| FvaError::Fff(fff_search::Error::FilePickerMissing))?;
+        with_picker(&self.picker, |picker| {
+            let parser = QueryParser::default();
+            let parsed = parser.parse(query);
+            let qt_guard = self.query_tracker.read().ok();
+            let qt_ref = qt_guard.as_ref().and_then(|g| g.as_ref());
 
-        let parser = QueryParser::default();
-        let parsed = parser.parse(query);
-        let qt_guard = self.query_tracker.read().ok();
-        let qt_ref = qt_guard.as_ref().and_then(|g| g.as_ref());
+            let result = picker.fuzzy_search(
+                &parsed,
+                qt_ref,
+                FuzzySearchOptions {
+                    max_threads: 0,
+                    current_file: None,
+                    project_path: Some(picker.base_path()),
+                    combo_boost_score_multiplier: 100,
+                    min_combo_count: 3,
+                    pagination: PaginationArgs { offset, limit },
+                    ..Default::default()
+                },
+            );
 
-        let result = picker.fuzzy_search(
-            &parsed,
-            qt_ref,
-            FuzzySearchOptions {
-                max_threads: 0,
-                current_file: None,
-                project_path: Some(picker.base_path()),
-                combo_boost_score_multiplier: 100,
-                min_combo_count: 3,
-                pagination: PaginationArgs { offset, limit },
-                ..Default::default()
-            },
-        );
+            let paths = result
+                .items
+                .iter()
+                .map(|item| item.relative_path(picker).to_string())
+                .collect();
 
-        let paths = result
-            .items
-            .iter()
-            .map(|item| item.relative_path(picker).to_string())
-            .collect();
-
-        Ok(FindFilesOutput {
-            paths,
-            total_matched: result.total_matched,
-            total_files: result.total_files,
+            Ok(FindFilesOutput {
+                paths,
+                total_matched: result.total_matched,
+                total_files: result.total_files,
+            })
         })
     }
 
     pub fn grep(&self, query: &str, offset: usize, limit: usize) -> Result<GrepOutput> {
-        let guard = self.picker.read()?;
-        let picker = guard
-            .as_ref()
-            .ok_or_else(|| FvaError::Fff(fff_search::Error::FilePickerMissing))?;
+        with_picker(&self.picker, |picker| {
+            let parser = QueryParser::new(AiGrepConfig);
+            let parsed = parser.parse(query);
+            let grep_text = parsed.grep_text();
 
-        let parser = QueryParser::new(AiGrepConfig);
-        let parsed = parser.parse(query);
-        let grep_text = parsed.grep_text();
+            let mode = if has_regex_metacharacters(&grep_text) {
+                GrepMode::Regex
+            } else {
+                GrepMode::PlainText
+            };
 
-        let mode = if has_regex_metacharacters(&grep_text) {
-            GrepMode::Regex
-        } else {
-            GrepMode::PlainText
-        };
+            let options = GrepSearchOptions {
+                max_file_size: 10 * 1024 * 1024,
+                max_matches_per_file: 10,
+                smart_case: true,
+                file_offset: offset,
+                page_limit: limit,
+                mode,
+                time_budget_ms: 0,
+                before_context: 0,
+                after_context: 8,
+                classify_definitions: true,
+                trim_whitespace: true,
+                abort_signal: None,
+            };
 
-        let options = GrepSearchOptions {
-            max_file_size: 10 * 1024 * 1024,
-            max_matches_per_file: 10,
-            smart_case: true,
-            file_offset: offset,
-            page_limit: limit,
-            mode,
-            time_budget_ms: 0,
-            before_context: 0,
-            after_context: 8,
-            classify_definitions: true,
-            trim_whitespace: true,
-            abort_signal: None,
-        };
+            let result = picker.grep(&parsed, &options);
+            let matches = result
+                .matches
+                .iter()
+                .map(|m| {
+                    let file = result.files[m.file_index].relative_path(picker).to_string();
+                    GrepMatchLine {
+                        file,
+                        line_number: m.line_number as usize,
+                        content: m.line_content.trim().to_string(),
+                    }
+                })
+                .collect();
 
-        let result = picker.grep(&parsed, &options);
-        let matches = result
-            .matches
-            .iter()
-            .map(|m| {
-                let file = result.files[m.file_index].relative_path(picker).to_string();
-                GrepMatchLine {
-                    file,
-                    line_number: m.line_number as usize,
-                    content: m.line_content.trim().to_string(),
-                }
+            Ok(GrepOutput {
+                matches,
+                next_file_offset: result.next_file_offset,
             })
-            .collect();
-
-        Ok(GrepOutput {
-            matches,
-            next_file_offset: result.next_file_offset,
         })
     }
 
