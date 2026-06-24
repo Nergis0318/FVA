@@ -71,7 +71,7 @@ jobs:
 
       - name: Install protobuf-compiler (macos)
         if: contains(matrix.target, 'apple-darwin')
-        run: brew install protobuf -y
+        run: brew install protobuf
 
       - name: Build
         run: cargo build --release --all-features --target ${{ matrix.target }}
