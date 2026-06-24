@@ -54,6 +54,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+          components: llvm-tools
 
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@main
@@ -68,6 +69,14 @@ jobs:
       - name: Install protobuf-compiler (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install clang/LLVM (Windows cross)
+        if: contains(matrix.target, 'windows-msvc')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm lld
+          LLVM_BIN="$(dirname "$(ls /usr/lib/llvm-*/bin/llvm-lib | head -1)")"
+          echo "${LLVM_BIN}" >> "$GITHUB_PATH"
 
       - name: Install cargo-xwin
         if: contains(matrix.target, 'windows-msvc')
