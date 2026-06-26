@@ -13,7 +13,7 @@ Most agent workflows chain `grep` → `read_file` → repeat. FVA replaces that 
 
 ## Install
 
-Pre-built binaries are published on [GitHub Releases](https://github.com/Nergis0318/FVA/releases) for:
+Pre-built binaries are published on [GitHub Releases](https://github.com/Xeon-Dot/fva/releases) for:
 
 | Platform | amd64 | arm64 |
 | -------- | ----- | ----- |
@@ -26,13 +26,13 @@ Pre-built binaries are published on [GitHub Releases](https://github.com/Nergis0
 **Linux / macOS (Apple Silicon)**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-irm https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.ps1 | iex
 ```
 
 Installs to `~/.local/bin` (Unix) or `%LOCALAPPDATA%\Programs\fva\bin` (Windows) and adds the directory to your user `PATH`.
@@ -40,23 +40,23 @@ Installs to `~/.local/bin` (Unix) or `%LOCALAPPDATA%\Programs\fva\bin` (Windows)
 ### Pin a version
 
 ```bash
-FVA_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh | bash
+FVA_VERSION=v0.2.0 curl -fsSL https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.sh | bash
 ```
 
 ```powershell
-$env:FVA_VERSION = "v0.2.0"; irm https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1 | iex
+$env:FVA_VERSION = "v0.2.0"; irm https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.ps1 | iex
 ```
 
 ### Manual download
 
-Download the archive for your platform from [Releases](https://github.com/Nergis0318/FVA/releases), verify against `SHA256SUMS.txt`, and place `fva` (or `fva.exe`) on your `PATH`.
+Download the archive for your platform from [Releases](https://github.com/Xeon-Dot/fva/releases), verify against `SHA256SUMS.txt`, and place `fva` (or `fva.exe`) on your `PATH`.
 
 ### Build from source
 
 Requires [Rust](https://rustup.rs/) 1.75+.
 
 ```bash
-git clone https://github.com/Nergis0318/FVA.git
+git clone https://github.com/Xeon-Dot/fva.git
 cd FVA
 cargo build --release
 ```

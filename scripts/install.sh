@@ -2,17 +2,17 @@
 # Install FVA from GitHub Releases.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.sh | bash
 #   ./scripts/install.sh [--version v0.2.0] [--install-dir ~/.local/bin]
 #
 # Environment:
 #   FVA_VERSION    Pin release tag (e.g. v0.2.0)
 #   INSTALL_DIR    Destination directory (default: ~/.local/bin)
-#   FVA_REPO       GitHub repo slug (default: Nergis0318/FVA)
+#   FVA_REPO       GitHub repo slug (default: Xeon-Dot/fva)
 
 set -euo pipefail
 
-REPO="${FVA_REPO:-Nergis0318/FVA}"
+REPO="${FVA_REPO:-Xeon-Dot/fva}"
 BINARY="fva"
 INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
 VERSION="${FVA_VERSION:-}"

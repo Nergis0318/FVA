@@ -1,19 +1,19 @@
 # Install FVA from GitHub Releases.
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.ps1 | iex
 #   .\scripts\install.ps1 [-Version v0.2.0] [-InstallDir $env:LOCALAPPDATA\Programs\fva\bin]
 #
 # Environment:
 #   FVA_VERSION    Pin release tag (e.g. v0.2.0)
 #   FVA_INSTALL_DIR Destination directory
-#   FVA_REPO       GitHub repo slug (default: Nergis0318/FVA)
+#   FVA_REPO       GitHub repo slug (default: Xeon-Dot/fva)
 
 [CmdletBinding()]
 param(
     [string]$Version = $env:FVA_VERSION,
     [string]$InstallDir = $(if ($env:FVA_INSTALL_DIR) { $env:FVA_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\fva\bin" }),
-    [string]$Repo = $(if ($env:FVA_REPO) { $env:FVA_REPO } else { "Nergis0318/FVA" }),
+    [string]$Repo = $(if ($env:FVA_REPO) { $env:FVA_REPO } else { "Xeon-Dot/fva" }),
     [switch]$NoPathUpdate
 )
 

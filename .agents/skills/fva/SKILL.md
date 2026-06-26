@@ -18,7 +18,7 @@ FVA combines **FFF** (fuzzy file search + grep), **vector embeddings**, and **AS
 fva --version
 ```
 
-If missing, install from [GitHub Releases](https://github.com/Nergis0318/FVA/releases) or build from source:
+If missing, install from [GitHub Releases](https://github.com/Xeon-Dot/fva/releases) or build from source:
 
 ```bash
 cargo install --path . --force

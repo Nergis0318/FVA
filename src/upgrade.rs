@@ -10,8 +10,8 @@ use std::process::Command;
 use crate::error::{FvaError, Result};
 use crate::util;
 
-const REPO: &str = "Nergis0318/FVA";
-const API_LATEST: &str = "https://api.github.com/repos/Nergis0318/FVA/releases/latest";
+const REPO: &str = "Xeon-Dot/fva";
+const API_LATEST: &str = "https://api.github.com/repos/Xeon-Dot/fva/releases/latest";
 
 #[cfg(not(windows))]
 const INSTALL_SHELL: (&str, &[&str], &str, &str) = ("sh", &["-c"], "-fsSL", "INSTALL_DIR");
@@ -145,9 +145,9 @@ fn restore_backup(backup: &Path, exe: &Path) {
 fn run_install_script(version: &str, install_dir: &Path) -> Result<()> {
     let (shell, args, fetch_cmd, dir_env) = INSTALL_SHELL;
     let script_url = if cfg!(windows) {
-        "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.ps1"
+        "https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.ps1"
     } else {
-        "https://raw.githubusercontent.com/Nergis0318/FVA/main/scripts/install.sh"
+        "https://raw.githubusercontent.com/Xeon-Dot/fva/main/scripts/install.sh"
     };
     let pipe_cmd = if cfg!(windows) { "iex" } else { "bash" };
     let command = format!("{fetch_cmd} {script_url} | {pipe_cmd}");
