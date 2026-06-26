@@ -168,7 +168,6 @@ impl FffEngine {
                     combo_boost_score_multiplier: 100,
                     min_combo_count: 3,
                     pagination: PaginationArgs { offset, limit },
-                    ..Default::default()
                 },
             );
 
