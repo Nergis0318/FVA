@@ -98,9 +98,9 @@ impl CallGraphStore {
         };
 
         // Load full snapshot if exists
-        if store.path.exists() {
-            if let Ok(bytes) = std::fs::read(&store.path) {
-                if let Ok(snapshot) = deserialize::<CallGraphSnapshot>(&bytes) {
+        if store.path.exists()
+            && let Ok(bytes) = std::fs::read(&store.path)
+                && let Ok(snapshot) = deserialize::<CallGraphSnapshot>(&bytes) {
                     store.load_snapshot(snapshot);
                     tracing::info!(
                         "loaded call graph snapshot: {} nodes, {} edges",
@@ -108,8 +108,6 @@ impl CallGraphStore {
                         store.graph.read().edge_count()
                     );
                 }
-            }
-        }
 
         // Replay delta log if exists
         if store.delta_path.exists() {
@@ -303,11 +301,10 @@ impl CallGraphStore {
                 continue;
             }
 
-            if let Some(weight) = graph.node_weight(node) {
-                if !weight.file.is_empty() && d > 0 {
+            if let Some(weight) = graph.node_weight(node)
+                && !weight.file.is_empty() && d > 0 {
                     result.push(weight.clone());
                 }
-            }
 
             if d < depth {
                 let neighbors = match direction {
@@ -350,8 +347,8 @@ impl CallGraphStore {
         let mut callee_map: HashMap<String, usize> = HashMap::new();
 
         for edge_idx in graph.edge_indices() {
-            if let Some((from, to)) = graph.edge_endpoints(edge_idx) {
-                if let (Some(&fi), Some(label)) = (node_map.get(&from), graph.edge_weight(edge_idx))
+            if let Some((from, to)) = graph.edge_endpoints(edge_idx)
+                && let (Some(&fi), Some(label)) = (node_map.get(&from), graph.edge_weight(edge_idx))
                 {
                     let ci = *callee_map.entry(label.clone()).or_insert_with(|| {
                         let i = callee_names.len();
@@ -361,7 +358,6 @@ impl CallGraphStore {
                     let _ = graph.node_weight(to);
                     edges.push((fi, ci));
                 }
-            }
         }
 
         let snapshot = CallGraphSnapshot {
@@ -393,11 +389,10 @@ impl CallGraphStore {
             serialize(&delta).map_err(|e| FvaError::Other(format!("delta serialize: {e}")))?;
 
         // Create delta directory if needed
-        if let Some(parent) = self.delta_path.parent() {
-            if !parent.exists() {
+        if let Some(parent) = self.delta_path.parent()
+            && !parent.exists() {
                 std::fs::create_dir_all(parent)?;
             }
-        }
 
         // Append delta to log file
         let mut file = std::fs::OpenOptions::new()

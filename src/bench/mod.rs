@@ -86,10 +86,7 @@ pub fn run(engine: &Arc<FvaEngine>, opts: &BenchOptions) -> BenchReport {
         "find_files",
         opts,
         || {
-            let _ = engine
-                .fff
-                .find_files("indexer", 0, 20)
-                .expect("find_files");
+            let _ = engine.fff.find_files("indexer", 0, 20).expect("find_files");
         },
         target_ms("find_files"),
     ));
@@ -161,7 +158,11 @@ pub fn run(engine: &Arc<FvaEngine>, opts: &BenchOptions) -> BenchReport {
         target_ms("get_call_graph"),
     ));
 
-    let query = opts.queries.first().cloned().unwrap_or_else(|| "main".into());
+    let query = opts
+        .queries
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "main".into());
     suite.add(bench_op(
         "get_smart_context",
         opts,
@@ -253,14 +254,13 @@ fn find_largest_rust_file(root: &Path) -> Option<PathBuf> {
         return None;
     }
     for entry in walkdir_simple(&src) {
-        if entry.extension().is_some_and(|e| e == "rs") {
-            if let Ok(meta) = entry.metadata() {
+        if entry.extension().is_some_and(|e| e == "rs")
+            && let Ok(meta) = entry.metadata() {
                 let size = meta.len();
                 if best.as_ref().is_none_or(|(s, _)| size > *s) {
                     best = Some((size, entry));
                 }
             }
-        }
     }
     best.map(|(_, p)| p)
 }
@@ -328,7 +328,10 @@ pub fn emit(report: &BenchReport, opts: &BenchOptions) {
 fn print_table(report: &BenchReport) {
     const W: usize = 68;
     println!("\n+{:-<W$}+", "", W = W);
-    println!("|  FVA Benchmark - {:<50} |", truncate_str(&report.repo, 50));
+    println!(
+        "|  FVA Benchmark - {:<50} |",
+        truncate_str(&report.repo, 50)
+    );
     println!("+{:-<W$}+", "", W = W);
 
     if let Some(c) = &report.corpus {
@@ -389,6 +392,11 @@ fn truncate_str(s: &str, max_chars: usize) -> String {
     if s.chars().count() <= max_chars {
         s.to_string()
     } else {
-        format!("{}...", s.chars().take(max_chars.saturating_sub(3)).collect::<String>())
+        format!(
+            "{}...",
+            s.chars()
+                .take(max_chars.saturating_sub(3))
+                .collect::<String>()
+        )
     }
 }

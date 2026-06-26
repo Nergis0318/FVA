@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{FvaError, Result};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Config {
     #[serde(default)]
     pub project: ProjectConfig,
@@ -199,20 +200,6 @@ impl Default for SecurityConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            project: ProjectConfig::default(),
-            indexer: IndexerConfig::default(),
-            fff: FffConfig::default(),
-            embedding: EmbeddingConfig::default(),
-            vector: VectorConfig::default(),
-            query: QueryConfig::default(),
-            mcp: McpConfig::default(),
-            security: SecurityConfig::default(),
-        }
-    }
-}
 
 fn default_root() -> String {
     ".".to_string()
@@ -300,11 +287,10 @@ impl Config {
             Self::merge_file(&mut value, path)?;
         }
 
-        if let Some(root) = Self::tentative_project_root(cli_root, &value) {
-            if let Some(project_path) = Self::project_config_path(&root) {
+        if let Some(root) = Self::tentative_project_root(cli_root, &value)
+            && let Some(project_path) = Self::project_config_path(&root) {
                 Self::merge_file(&mut value, &project_path)?;
             }
-        }
 
         if let Some(path) = explicit {
             Self::merge_file(&mut value, path)?;
@@ -313,13 +299,13 @@ impl Config {
         let merged_toml = toml::to_string(&value)
             .map_err(|e| FvaError::Config(format!("serialize merged config: {e}")))?;
         toml::from_str(&merged_toml)
-            .map_err(|e| FvaError::Config(format!("invalid config: {e}")).into())
+            .map_err(|e| FvaError::Config(format!("invalid config: {e}")))
     }
 
     /// Global defaults: `~/.config/fva/config.toml` (XDG-style under home).
     pub fn global_config_path() -> PathBuf {
         dirs::home_dir()
-            .unwrap_or_else(PathBuf::new)
+            .unwrap_or_default()
             .join(".config")
             .join("fva")
             .join("config.toml")

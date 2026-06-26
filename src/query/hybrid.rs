@@ -128,8 +128,8 @@ impl HybridQueryEngine {
         }
 
         // Stage 2: Vector semantic search
-        if let Ok(query_vec) = self.embedder.embed_one(query) {
-            if let Ok(vector_hits) = self.vectors.search(&query_vec, limit * 5) {
+        if let Ok(query_vec) = self.embedder.embed_one(query)
+            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit * 5) {
                 for hit in vector_hits {
                     if let Some(chunk) = self.find_chunk(&hit.chunk_id) {
                         self.merge_hit(
@@ -143,7 +143,6 @@ impl HybridQueryEngine {
                     }
                 }
             }
-        }
 
         // Stage 3: Graph boost for matching symbols
         let graph_symbols = self.graph.find_symbol_nodes(query);
@@ -190,8 +189,8 @@ impl HybridQueryEngine {
     pub fn semantic_search(&self, query: &str, limit: usize) -> HybridSearchResult {
         let mut hits = Vec::new();
 
-        if let Ok(query_vec) = self.embedder.embed_one(query) {
-            if let Ok(vector_hits) = self.vectors.search(&query_vec, limit) {
+        if let Ok(query_vec) = self.embedder.embed_one(query)
+            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit) {
                 for vh in vector_hits {
                     if let Some(chunk) = self.find_chunk(&vh.chunk_id) {
                         let mut hit = HybridHit::from_chunk(&chunk);
@@ -202,7 +201,6 @@ impl HybridQueryEngine {
                     }
                 }
             }
-        }
 
         HybridSearchResult {
             total_candidates: hits.len(),

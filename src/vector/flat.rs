@@ -111,9 +111,9 @@ impl FlatVectorStore {
         };
 
         let data_file = path.join("vectors.bin");
-        if data_file.exists() {
-            if let Ok(bytes) = std::fs::read(&data_file) {
-                if let Ok(snapshot) = bincode::deserialize::<VectorSnapshot>(&bytes) {
+        if data_file.exists()
+            && let Ok(bytes) = std::fs::read(&data_file)
+                && let Ok(snapshot) = bincode::deserialize::<VectorSnapshot>(&bytes) {
                     if snapshot.dimensions == dimensions {
                         store.load_snapshot(snapshot);
                         tracing::info!(
@@ -129,8 +129,6 @@ impl FlatVectorStore {
                         );
                     }
                 }
-            }
-        }
 
         Ok(store)
     }
@@ -218,11 +216,10 @@ impl VectorStore for FlatVectorStore {
                 // The entry that was at `last` is now at `idx` — update its
                 // by_file index so future lookups are correct.
                 let moved_path = entries[idx].relative_path.clone();
-                if let Some(moved_indices) = by_file.get_mut(&moved_path) {
-                    if let Some(pos) = moved_indices.iter().position(|i| *i == last) {
+                if let Some(moved_indices) = by_file.get_mut(&moved_path)
+                    && let Some(pos) = moved_indices.iter().position(|i| *i == last) {
                         moved_indices[pos] = idx;
                     }
-                }
             }
         }
 
@@ -251,9 +248,8 @@ impl VectorStore for FlatVectorStore {
         });
 
         // Sort only the top-k portion descending by score
-        scored[n - k..].sort_unstable_by(|a, b| {
-            b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        scored[n - k..]
+            .sort_unstable_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
 
         // Materialise only top-k VectorHit objects (avoids N string clones)
         let mut hits: Vec<VectorHit> = Vec::with_capacity(k);

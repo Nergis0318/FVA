@@ -196,7 +196,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "config".into(),
                 ],
                 output: output.or_else(|| {
-                    Some(engine.config.resolve_data_dir(&engine.root).join("benchmarks"))
+                    Some(
+                        engine
+                            .config
+                            .resolve_data_dir(&engine.root)
+                            .join("benchmarks"),
+                    )
                 }),
                 json,
             };

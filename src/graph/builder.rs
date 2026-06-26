@@ -44,7 +44,7 @@ pub fn extract_edges(chunks: &[CodeChunk]) -> Vec<GraphEdge> {
                 if callee.len() < 2 || keywords.contains(callee) {
                     continue;
                 }
-                if callee == &chunk.symbol_name {
+                if callee == chunk.symbol_name {
                     continue;
                 }
                 edges.push(GraphEdge {
