@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{FvaError, Result};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     #[serde(default)]
     pub project: ProjectConfig,
@@ -200,7 +199,6 @@ impl Default for SecurityConfig {
     }
 }
 
-
 fn default_root() -> String {
     ".".to_string()
 }
@@ -288,9 +286,10 @@ impl Config {
         }
 
         if let Some(root) = Self::tentative_project_root(cli_root, &value)
-            && let Some(project_path) = Self::project_config_path(&root) {
-                Self::merge_file(&mut value, &project_path)?;
-            }
+            && let Some(project_path) = Self::project_config_path(&root)
+        {
+            Self::merge_file(&mut value, &project_path)?;
+        }
 
         if let Some(path) = explicit {
             Self::merge_file(&mut value, path)?;
@@ -298,8 +297,7 @@ impl Config {
 
         let merged_toml = toml::to_string(&value)
             .map_err(|e| FvaError::Config(format!("serialize merged config: {e}")))?;
-        toml::from_str(&merged_toml)
-            .map_err(|e| FvaError::Config(format!("invalid config: {e}")))
+        toml::from_str(&merged_toml).map_err(|e| FvaError::Config(format!("invalid config: {e}")))
     }
 
     /// Global defaults: `~/.config/fva/config.toml` (XDG-style under home).

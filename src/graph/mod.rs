@@ -100,14 +100,15 @@ impl CallGraphStore {
         // Load full snapshot if exists
         if store.path.exists()
             && let Ok(bytes) = std::fs::read(&store.path)
-                && let Ok(snapshot) = deserialize::<CallGraphSnapshot>(&bytes) {
-                    store.load_snapshot(snapshot);
-                    tracing::info!(
-                        "loaded call graph snapshot: {} nodes, {} edges",
-                        store.graph.read().node_count(),
-                        store.graph.read().edge_count()
-                    );
-                }
+            && let Ok(snapshot) = deserialize::<CallGraphSnapshot>(&bytes)
+        {
+            store.load_snapshot(snapshot);
+            tracing::info!(
+                "loaded call graph snapshot: {} nodes, {} edges",
+                store.graph.read().node_count(),
+                store.graph.read().edge_count()
+            );
+        }
 
         // Replay delta log if exists
         if store.delta_path.exists() {
@@ -302,9 +303,11 @@ impl CallGraphStore {
             }
 
             if let Some(weight) = graph.node_weight(node)
-                && !weight.file.is_empty() && d > 0 {
-                    result.push(weight.clone());
-                }
+                && !weight.file.is_empty()
+                && d > 0
+            {
+                result.push(weight.clone());
+            }
 
             if d < depth {
                 let neighbors = match direction {
@@ -349,15 +352,15 @@ impl CallGraphStore {
         for edge_idx in graph.edge_indices() {
             if let Some((from, to)) = graph.edge_endpoints(edge_idx)
                 && let (Some(&fi), Some(label)) = (node_map.get(&from), graph.edge_weight(edge_idx))
-                {
-                    let ci = *callee_map.entry(label.clone()).or_insert_with(|| {
-                        let i = callee_names.len();
-                        callee_names.push(label.clone());
-                        i
-                    });
-                    let _ = graph.node_weight(to);
-                    edges.push((fi, ci));
-                }
+            {
+                let ci = *callee_map.entry(label.clone()).or_insert_with(|| {
+                    let i = callee_names.len();
+                    callee_names.push(label.clone());
+                    i
+                });
+                let _ = graph.node_weight(to);
+                edges.push((fi, ci));
+            }
         }
 
         let snapshot = CallGraphSnapshot {
@@ -390,9 +393,10 @@ impl CallGraphStore {
 
         // Create delta directory if needed
         if let Some(parent) = self.delta_path.parent()
-            && !parent.exists() {
-                std::fs::create_dir_all(parent)?;
-            }
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent)?;
+        }
 
         // Append delta to log file
         let mut file = std::fs::OpenOptions::new()

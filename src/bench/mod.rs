@@ -255,12 +255,13 @@ fn find_largest_rust_file(root: &Path) -> Option<PathBuf> {
     }
     for entry in walkdir_simple(&src) {
         if entry.extension().is_some_and(|e| e == "rs")
-            && let Ok(meta) = entry.metadata() {
-                let size = meta.len();
-                if best.as_ref().is_none_or(|(s, _)| size > *s) {
-                    best = Some((size, entry));
-                }
+            && let Ok(meta) = entry.metadata()
+        {
+            let size = meta.len();
+            if best.as_ref().is_none_or(|(s, _)| size > *s) {
+                best = Some((size, entry));
             }
+        }
     }
     best.map(|(_, p)| p)
 }

@@ -112,8 +112,7 @@ where
         f(&s[byte_start..byte_end]);
     };
 
-    for i in 0..len {
-        let ch = char_indices[i].1;
+    for (i, (_, ch)) in char_indices.iter().enumerate() {
         let is_upper = ch.is_uppercase();
         let is_lower = ch.is_lowercase();
 
@@ -121,7 +120,7 @@ where
             emit(part_start, i);
             part_start = i;
         }
-        if ch == '_' {
+        if *ch == '_' {
             if i > part_start {
                 emit(part_start, i);
             }
@@ -168,9 +167,7 @@ mod tests {
     #[test]
     fn embed_does_not_panic_on_utf8_identifier_tokens() {
         let e = LocalEmbedder::new(128);
-        let v = e
-            .embed_one("注释：对函数 fooBar_baz 做说明")
-            .unwrap();
+        let v = e.embed_one("注释：对函数 fooBar_baz 做说明").unwrap();
         assert_eq!(v.len(), 128);
     }
 

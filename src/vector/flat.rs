@@ -113,22 +113,23 @@ impl FlatVectorStore {
         let data_file = path.join("vectors.bin");
         if data_file.exists()
             && let Ok(bytes) = std::fs::read(&data_file)
-                && let Ok(snapshot) = bincode::deserialize::<VectorSnapshot>(&bytes) {
-                    if snapshot.dimensions == dimensions {
-                        store.load_snapshot(snapshot);
-                        tracing::info!(
-                            "loaded {} vectors from {}",
-                            store.entries.read().len(),
-                            data_file.display()
-                        );
-                    } else {
-                        tracing::warn!(
-                            "vector dimensions changed ({} -> {}), re-indexing required",
-                            snapshot.dimensions,
-                            dimensions
-                        );
-                    }
-                }
+            && let Ok(snapshot) = bincode::deserialize::<VectorSnapshot>(&bytes)
+        {
+            if snapshot.dimensions == dimensions {
+                store.load_snapshot(snapshot);
+                tracing::info!(
+                    "loaded {} vectors from {}",
+                    store.entries.read().len(),
+                    data_file.display()
+                );
+            } else {
+                tracing::warn!(
+                    "vector dimensions changed ({} -> {}), re-indexing required",
+                    snapshot.dimensions,
+                    dimensions
+                );
+            }
+        }
 
         Ok(store)
     }
@@ -217,9 +218,10 @@ impl VectorStore for FlatVectorStore {
                 // by_file index so future lookups are correct.
                 let moved_path = entries[idx].relative_path.clone();
                 if let Some(moved_indices) = by_file.get_mut(&moved_path)
-                    && let Some(pos) = moved_indices.iter().position(|i| *i == last) {
-                        moved_indices[pos] = idx;
-                    }
+                    && let Some(pos) = moved_indices.iter().position(|i| *i == last)
+                {
+                    moved_indices[pos] = idx;
+                }
             }
         }
 

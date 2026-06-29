@@ -129,20 +129,21 @@ impl HybridQueryEngine {
 
         // Stage 2: Vector semantic search
         if let Ok(query_vec) = self.embedder.embed_one(query)
-            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit * 5) {
-                for hit in vector_hits {
-                    if let Some(chunk) = self.find_chunk(&hit.chunk_id) {
-                        self.merge_hit(
-                            &mut candidates,
-                            &chunk,
-                            0.0,
-                            hit.score * self.config.vector_weight,
-                            0.0,
-                            "vector",
-                        );
-                    }
+            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit * 5)
+        {
+            for hit in vector_hits {
+                if let Some(chunk) = self.find_chunk(&hit.chunk_id) {
+                    self.merge_hit(
+                        &mut candidates,
+                        &chunk,
+                        0.0,
+                        hit.score * self.config.vector_weight,
+                        0.0,
+                        "vector",
+                    );
                 }
             }
+        }
 
         // Stage 3: Graph boost for matching symbols
         let graph_symbols = self.graph.find_symbol_nodes(query);
@@ -190,17 +191,18 @@ impl HybridQueryEngine {
         let mut hits = Vec::new();
 
         if let Ok(query_vec) = self.embedder.embed_one(query)
-            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit) {
-                for vh in vector_hits {
-                    if let Some(chunk) = self.find_chunk(&vh.chunk_id) {
-                        let mut hit = HybridHit::from_chunk(&chunk);
-                        hit.score = vh.score;
-                        hit.vector_score = vh.score;
-                        hit.sources = vec!["vector".into()];
-                        hits.push(hit);
-                    }
+            && let Ok(vector_hits) = self.vectors.search(&query_vec, limit)
+        {
+            for vh in vector_hits {
+                if let Some(chunk) = self.find_chunk(&vh.chunk_id) {
+                    let mut hit = HybridHit::from_chunk(&chunk);
+                    hit.score = vh.score;
+                    hit.vector_score = vh.score;
+                    hit.sources = vec!["vector".into()];
+                    hits.push(hit);
                 }
             }
+        }
 
         HybridSearchResult {
             total_candidates: hits.len(),

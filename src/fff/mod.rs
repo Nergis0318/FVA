@@ -235,9 +235,10 @@ impl FffEngine {
 
     pub fn shutdown(&self) {
         if let Ok(mut guard) = self.picker.write()
-            && let Some(ref mut picker) = *guard {
-                picker.stop_background_monitor();
-            }
+            && let Some(ref mut picker) = *guard
+        {
+            picker.stop_background_monitor();
+        }
     }
 }
 
