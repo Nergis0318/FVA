@@ -89,33 +89,50 @@ fn for_each_identifier_part<F>(s: &str, mut f: F)
 where
     F: FnMut(&str),
 {
-    let mut start = 0usize;
-    let chars: Vec<char> = s.chars().collect();
+    if s.is_empty() {
+        f(s);
+        return;
+    }
+
+    let char_indices: Vec<(usize, char)> = s.char_indices().collect();
+    let len = char_indices.len();
+    let mut part_start = 0usize;
     let mut prev_lower = false;
 
-    for (i, &ch) in chars.iter().enumerate() {
+    let mut emit = |part_start: usize, part_end: usize| {
+        if part_end <= part_start {
+            return;
+        }
+        let byte_start = char_indices[part_start].0;
+        let byte_end = if part_end < len {
+            char_indices[part_end].0
+        } else {
+            s.len()
+        };
+        f(&s[byte_start..byte_end]);
+    };
+
+    for i in 0..len {
+        let ch = char_indices[i].1;
         let is_upper = ch.is_uppercase();
         let is_lower = ch.is_lowercase();
 
-        if is_upper && prev_lower && i > start {
-            f(&s[start..i]);
-            start = i;
+        if is_upper && prev_lower && i > part_start {
+            emit(part_start, i);
+            part_start = i;
         }
         if ch == '_' {
-            if i > start {
-                f(&s[start..i]);
+            if i > part_start {
+                emit(part_start, i);
             }
-            start = i + 1;
+            part_start = i + 1;
             prev_lower = false;
             continue;
         }
         prev_lower = is_lower;
     }
-    if start < chars.len() {
-        f(&s[start..]);
-    }
-    if chars.is_empty() {
-        f(s);
+    if part_start < len {
+        emit(part_start, len);
     }
 }
 
@@ -146,6 +163,15 @@ mod tests {
         assert_eq!(v.len(), 128);
         let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn embed_does_not_panic_on_utf8_identifier_tokens() {
+        let e = LocalEmbedder::new(128);
+        let v = e
+            .embed_one("注释：对函数 fooBar_baz 做说明")
+            .unwrap();
+        assert_eq!(v.len(), 128);
     }
 
     #[test]
